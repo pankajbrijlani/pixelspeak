@@ -18,12 +18,21 @@ export function assetPath(projectId: string, assetId: string, ext: string) {
   return path.join(originalsDir(projectId), `${assetId}${ext}`);
 }
 
+export function thumbnailsDir(projectId: string) {
+  return path.join(projectDir(projectId), "thumbnails");
+}
+
+export function thumbnailPath(projectId: string, assetId: string) {
+  return path.join(thumbnailsDir(projectId), `${assetId}.jpg`);
+}
+
 export function outputPath(projectId: string) {
   return path.join(projectDir(projectId), "output.mp4");
 }
 
 export async function ensureProjectDirs(projectId: string) {
   await mkdir(originalsDir(projectId), { recursive: true });
+  await mkdir(thumbnailsDir(projectId), { recursive: true });
 }
 
 export function safeExt(filename: string) {

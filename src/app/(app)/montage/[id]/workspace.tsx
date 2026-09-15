@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Badge } from "@/lib/ui";
+import {
+  CheckCircleIcon,
+  DownloadIcon,
+  ErrorCircleIcon,
+  FilmIcon,
+  ImageIcon,
+  SpinnerIcon,
+  UploadCloudIcon,
+} from "../icons";
 
 type AssetStatus = "PENDING" | "ANALYZING" | "READY" | "FAILED";
 type ProjectStatus = "DRAFT" | "ANALYZING" | "RENDERING" | "DONE" | "FAILED";
@@ -42,6 +50,7 @@ export function MontageWorkspace({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,7 +65,10 @@ export function MontageWorkspace({
   }, [projectId]);
 
   useEffect(() => {
-    const active = status === "ANALYZING" || status === "RENDERING" || assets.some((a) => a.status !== "READY" && a.status !== "FAILED");
+    const active =
+      status === "ANALYZING" ||
+      status === "RENDERING" ||
+      assets.some((a) => a.status !== "READY" && a.status !== "FAILED");
     if (!active) return;
     const interval = setInterval(refreshStatus, POLL_MS);
     return () => clearInterval(interval);
@@ -121,6 +133,7 @@ export function MontageWorkspace({
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
+    setDragActive(false);
     collectFilesFromDataTransfer(e.dataTransfer).then(uploadFiles);
   }
 
@@ -141,122 +154,197 @@ export function MontageWorkspace({
 
   const busy = status === "ANALYZING" || status === "RENDERING";
   const readyCount = assets.filter((a) => a.status === "READY").length;
+  const uploadPct = uploadProgress ? Math.round((uploadProgress.done / uploadProgress.total) * 100) : 0;
 
   return (
-    <div className="space-y-6">
-      <div
-        onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-        className="rounded-2xl border-2 border-dashed border-neutral-700 bg-neutral-900/50 p-8 text-center"
-      >
-        <p className="text-sm text-neutral-300">Drag & drop a folder of videos and photos here</p>
-        <p className="mt-1 text-xs text-neutral-500">or</p>
-        <div className="mt-3 flex justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => folderInputRef.current?.click()}
-            className="rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
-          >
-            Choose a folder
-          </button>
-          <button
-            type="button"
-            onClick={() => filesInputRef.current?.click()}
-            className="rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
-          >
-            Choose files
-          </button>
-        </div>
-        <input
-          ref={folderInputRef}
-          type="file"
-          multiple
-          // @ts-expect-error non-standard attribute, Chromium/Edge only
-          webkitdirectory=""
-          className="hidden"
-          onChange={(e) => e.target.files && uploadFiles(Array.from(e.target.files))}
-        />
-        <input
-          ref={filesInputRef}
-          type="file"
-          multiple
-          accept="video/*,image/*"
-          className="hidden"
-          onChange={(e) => e.target.files && uploadFiles(Array.from(e.target.files))}
-        />
-        {uploadProgress && (
-          <p className="mt-3 text-xs text-violet-400">
-            Uploading {uploadProgress.done}/{uploadProgress.total}…
-          </p>
-        )}
-      </div>
+    <div className="space-y-8">
+      <Step number={1} title="Add your footage" done={assets.length > 0 && !uploading}>
+        <div
+          onDrop={handleDrop}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={() => setDragActive(false)}
+          className={`rounded-2xl border-2 border-dashed p-10 text-center transition ${
+            dragActive ? "border-violet-500 bg-violet-500/10" : "border-neutral-700 bg-neutral-900/40"
+          }`}
+        >
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 text-neutral-400">
+            <UploadCloudIcon />
+          </div>
+          <p className="text-sm font-medium text-neutral-200">Drag & drop a folder of videos and photos</p>
+          <p className="mt-1 text-xs text-neutral-500">or</p>
+          <div className="mt-3 flex justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => folderInputRef.current?.click()}
+              className="rounded-lg border border-neutral-700 px-3.5 py-2 text-sm text-neutral-200 transition hover:bg-neutral-800"
+            >
+              Choose a folder
+            </button>
+            <button
+              type="button"
+              onClick={() => filesInputRef.current?.click()}
+              className="rounded-lg border border-neutral-700 px-3.5 py-2 text-sm text-neutral-200 transition hover:bg-neutral-800"
+            >
+              Choose files
+            </button>
+          </div>
+          <input
+            ref={folderInputRef}
+            type="file"
+            multiple
+            // @ts-expect-error non-standard attribute, Chromium/Edge only
+            webkitdirectory=""
+            className="hidden"
+            onChange={(e) => e.target.files && uploadFiles(Array.from(e.target.files))}
+          />
+          <input
+            ref={filesInputRef}
+            type="file"
+            multiple
+            accept="video/*,image/*"
+            className="hidden"
+            onChange={(e) => e.target.files && uploadFiles(Array.from(e.target.files))}
+          />
 
-      {assets.length > 0 && (
-        <div>
-          <h2 className="mb-2 text-sm font-medium text-white">
-            Footage ({readyCount}/{assets.length} analyzed)
-          </h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">
-            {assets.map((a) => (
-              <div key={a.id} className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
-                <div className="flex h-20 items-center justify-center bg-black text-2xl">
+          {uploadProgress && (
+            <div className="mx-auto mt-5 max-w-xs">
+              <div className="h-1.5 overflow-hidden rounded-full bg-neutral-800">
+                <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${uploadPct}%` }} />
+              </div>
+              <p className="mt-1.5 text-xs text-violet-400">
+                Uploading {uploadProgress.done}/{uploadProgress.total}…
+              </p>
+            </div>
+          )}
+        </div>
+
+        {assets.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-2 text-xs text-neutral-500">
+              {assets.length} file{assets.length === 1 ? "" : "s"} &middot; {readyCount} analyzed
+            </p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+              {assets.map((a) => (
+                <div key={a.id} className="group relative aspect-square overflow-hidden rounded-lg border border-neutral-800 bg-black">
                   {a.type === "PHOTO" ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={`/api/montage/media/${a.id}`} alt={a.originalName} className="h-full w-full object-cover" />
+                  ) : a.status === "READY" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/api/montage/thumbnail/${a.id}`} alt={a.originalName} className="h-full w-full object-cover" />
                   ) : (
-                    <span>🎬</span>
+                    <div className="flex h-full w-full items-center justify-center bg-neutral-900 text-neutral-600">
+                      <FilmIcon className={`h-6 w-6 ${a.status === "ANALYZING" ? "animate-pulse" : ""}`} />
+                    </div>
                   )}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent px-1.5 py-1">
+                    <span className="flex items-center gap-1 text-white/80">
+                      {a.type === "VIDEO" ? <FilmIcon className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}
+                    </span>
+                    <AssetStatusDot status={a.status} />
+                  </div>
                 </div>
-                <div className="p-1.5">
-                  <p className="truncate text-[11px] text-neutral-300">{a.originalName}</p>
-                  <AssetStatusBadge status={a.status} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          disabled={assets.length === 0 || busy || uploading || generating}
-          onClick={handleGenerate}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
-        >
-          {busy ? "Working…" : "Generate montage"}
-        </button>
-        {busy && (
-          <span className="text-xs text-neutral-400">
-            {status === "ANALYZING" ? "Finding the good moments…" : "Rendering final cut…"}
-          </span>
         )}
-      </div>
+      </Step>
 
-      {errorMessage && (
-        <div className="rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-300">{errorMessage}</div>
-      )}
+      <Step number={2} title="Generate your montage" done={status === "DONE"}>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={assets.length === 0 || busy || uploading || generating}
+            onClick={handleGenerate}
+            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy && <SpinnerIcon className="h-4 w-4" />}
+            {busy ? (status === "ANALYZING" ? "Finding the good moments…" : "Rendering final cut…") : "Generate montage"}
+          </button>
+          {!busy && assets.length === 0 && <span className="text-xs text-neutral-500">Add footage first</span>}
+        </div>
+
+        {busy && (
+          <div className="mt-3 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-neutral-800">
+            <div className="h-full w-1/3 animate-[pulse_1.4s_ease-in-out_infinite] rounded-full bg-violet-500" />
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-300">
+            <ErrorCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+      </Step>
 
       {hasOutput && status === "DONE" && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-medium text-white">Your montage</h2>
-          <video controls className="max-h-[70vh] rounded-xl border border-neutral-800" src={`/api/montage/output/${projectId}`} />
-          <a
-            href={`/api/montage/output/${projectId}`}
-            download
-            className="inline-block text-sm text-violet-400 hover:underline"
-          >
-            Download MP4
-          </a>
-        </div>
+        <Step number={3} title="Your montage" done>
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 sm:items-start sm:flex-row">
+            <video
+              controls
+              className="max-h-[60vh] w-auto max-w-full rounded-xl border border-neutral-800 shadow-xl"
+              src={`/api/montage/output/${projectId}`}
+            />
+            <div className="flex flex-col gap-2 sm:pt-2">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-400">
+                <CheckCircleIcon className="h-4 w-4" /> Ready
+              </p>
+              <a
+                href={`/api/montage/output/${projectId}`}
+                download
+                className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500"
+              >
+                <DownloadIcon />
+                Download MP4
+              </a>
+            </div>
+          </div>
+        </Step>
       )}
     </div>
   );
 }
 
-function AssetStatusBadge({ status }: { status: AssetStatus }) {
-  if (status === "READY") return <Badge tone="green">ready</Badge>;
-  if (status === "FAILED") return <Badge tone="red">failed</Badge>;
-  if (status === "ANALYZING") return <Badge tone="violet">analyzing</Badge>;
-  return <Badge tone="neutral">pending</Badge>;
+function Step({
+  number,
+  title,
+  done,
+  children,
+}: {
+  number: number;
+  title: string;
+  done: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <div className="mb-3 flex items-center gap-2.5">
+        <span
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+            done ? "bg-emerald-500/20 text-emerald-400" : "bg-neutral-800 text-neutral-400"
+          }`}
+        >
+          {done ? <CheckCircleIcon className="h-4 w-4" /> : number}
+        </span>
+        <h2 className="text-sm font-medium text-white">{title}</h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function AssetStatusDot({ status }: { status: AssetStatus }) {
+  const color =
+    status === "READY"
+      ? "bg-emerald-400"
+      : status === "FAILED"
+        ? "bg-red-400"
+        : status === "ANALYZING"
+          ? "bg-violet-400 animate-pulse"
+          : "bg-neutral-500";
+  return <span className={`h-1.5 w-1.5 rounded-full ${color}`} />;
 }

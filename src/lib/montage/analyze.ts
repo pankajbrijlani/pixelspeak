@@ -1,10 +1,10 @@
 import path from "node:path";
 import { mkdir, rm } from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
-import { detectScenes, detectSilence, extractAudio, probe } from "./ffmpeg";
+import { detectScenes, detectSilence, extractAudio, extractThumbnail, probe } from "./ffmpeg";
 import { analyzePhoto } from "./photo";
 import { transcribeAudio } from "./transcribe";
-import { projectDir } from "./storage";
+import { projectDir, thumbnailPath } from "./storage";
 
 export interface VideoAnalysis {
   kind: "video";
@@ -30,6 +30,10 @@ export async function analyzeAsset(assetId: string) {
         detectScenes(asset.storagePath),
         detectSilence(asset.storagePath),
       ]);
+
+      await extractThumbnail(asset.storagePath, Math.min(1, durationSec / 2), thumbnailPath(asset.projectId, assetId)).catch(
+        (err) => console.error(`[montage] thumbnail failed for asset ${assetId}`, err),
+      );
 
       let transcript: VideoAnalysis["transcript"] = null;
       if (process.env.OPENAI_API_KEY) {
