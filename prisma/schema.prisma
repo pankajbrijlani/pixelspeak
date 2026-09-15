@@ -24,6 +24,7 @@ model User {
   leadLists     LeadList[]
   campaigns     Campaign[]
   adAccounts    AdAccount[]
+  montageProjects MontageProject[]
 }
 
 model Account {
@@ -294,4 +295,84 @@ model AdCampaign {
   updatedAt       DateTime          @updatedAt
 
   adAccount AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+}
+
+// ---------- AI Montage (auto video/photo editor) ----------
+
+enum MontageStatus {
+  DRAFT
+  ANALYZING
+  RENDERING
+  DONE
+  FAILED
+}
+
+enum MontageAssetType {
+  VIDEO
+  PHOTO
+}
+
+enum MontageAssetStatus {
+  PENDING
+  ANALYZING
+  READY
+  FAILED
+}
+
+model MontageProject {
+  id                String        @id @default(cuid())
+  userId            String
+  name              String
+  status            MontageStatus @default(DRAFT)
+  targetDurationSec Int           @default(45)
+  musicPath         String?
+  outputPath        String?
+  errorMessage      String?       @db.Text
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets   MontageAsset[]
+  segments MontageSegment[]
+}
+
+model MontageAsset {
+  id           String              @id @default(cuid())
+  projectId    String
+  type         MontageAssetType
+  status       MontageAssetStatus  @default(PENDING)
+  originalName String
+  storagePath  String
+  mimeType     String?
+  durationSec  Float?
+  width        Int?
+  height       Int?
+  captureOrder Int                 @default(0)
+  analysis     Json?
+  errorMessage String?             @db.Text
+  createdAt    DateTime            @default(now())
+
+  project  MontageProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  segments MontageSegment[]
+
+  @@index([projectId])
+}
+
+model MontageSegment {
+  id        String           @id @default(cuid())
+  projectId String
+  assetId   String
+  order     Int
+  type      MontageAssetType
+  inSec     Float
+  outSec    Float
+  speed     Float            @default(1)
+  score     Float            @default(0)
+  caption   String?
+  createdAt DateTime         @default(now())
+
+  project MontageProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  asset   MontageAsset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, order])
 }

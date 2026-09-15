@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# montage: user-uploaded footage and rendered output, plus the Remotion bundle cache
+/storage/
+/.remotion-bundle/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

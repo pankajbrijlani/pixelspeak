@@ -14,8 +14,14 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
     "@prisma/client": "^6.19.3",
+    "@remotion/bundler": "^4.0.525",
+    "@remotion/cli": "^4.0.525",
+    "@remotion/renderer": "^4.0.525",
+    "@remotion/transitions": "^4.0.525",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.4.0",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
     "googleapis": "^181.0.0",
     "next": "16.3.5",
     "next-auth": "^5.0.0-beta.32",
@@ -23,6 +29,8 @@
     "prisma": "^6.19.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "remotion": "^4.0.525",
+    "sharp": "^0.35.4",
     "zod": "^4.6.5"
   },
   "devDependencies": {
