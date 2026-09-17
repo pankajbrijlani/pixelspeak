@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "create-user": "node scripts/create-user.mjs",
+    "create-user": "node --env-file=.env scripts/create-user.mjs",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
   },
