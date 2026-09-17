@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
-import { assetPath, ensureProjectDirs, safeExt } from "@/lib/montage/storage";
-
-const VIDEO_TYPES = new Set([".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv"]);
-const MAX_FILE_BYTES = 500 * 1024 * 1024;
+import { ensureProjectDirs } from "@/lib/montage/storage";
+import { saveMontageAsset } from "@/lib/montage/assets";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: projectId } = await params;
@@ -31,36 +27,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const ext = safeExt(file.name);
-    if (!ext) {
-      rejected.push({ name: file.name, reason: "Unsupported file type" });
-      continue;
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      rejected.push({ name: file.name, reason: "File too large (max 500MB)" });
-      continue;
-    }
-
-    const assetId = randomUUID();
-    const type = VIDEO_TYPES.has(ext) ? "VIDEO" : "PHOTO";
-    const destination = assetPath(projectId, assetId, ext);
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(destination, buffer);
-
-    await prisma.montageAsset.create({
-      data: {
-        id: assetId,
-        projectId,
-        type,
-        originalName: file.name,
-        storagePath: destination,
-        mimeType: file.type || null,
-        captureOrder: existingCount + i,
-        status: "PENDING",
-      },
-    });
-
-    created.push({ id: assetId, originalName: file.name });
+    const result = await saveMontageAsset(projectId, file.name, buffer, file.type || null, existingCount + i);
+    if (result.ok) {
+      created.push({ id: result.id, originalName: result.originalName });
+    } else {
+      rejected.push({ name: result.name, reason: result.reason });
+    }
   }
 
   return NextResponse.json({ created, rejected });

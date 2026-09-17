@@ -72,6 +72,15 @@ export function SparklesIcon({ className = "h-5 w-5" }: { className?: string }) 
   );
 }
 
+export function DriveIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth={1.6}>
+      <path d="M8.5 3h7l6 10.5-3.5 6h-12l-3.5-6L8.5 3Z" strokeLinejoin="round" />
+      <path d="M8.5 3 15 14.5M15.5 19.5H4M18.5 8 12 19.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function TrashIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth={1.7}>

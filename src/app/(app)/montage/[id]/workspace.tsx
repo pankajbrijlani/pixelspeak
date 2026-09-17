@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CheckCircleIcon,
   DownloadIcon,
+  DriveIcon,
   ErrorCircleIcon,
   FilmIcon,
   ImageIcon,
@@ -51,6 +52,9 @@ export function MontageWorkspace({
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [driveUrl, setDriveUrl] = useState("");
+  const [importingDrive, setImportingDrive] = useState(false);
+  const [driveError, setDriveError] = useState<string | null>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,6 +109,49 @@ export function MontageWorkspace({
 
     setUploading(false);
     setUploadProgress(null);
+  }
+
+  async function importFromDrive() {
+    if (!driveUrl.trim()) return;
+    setImportingDrive(true);
+    setDriveError(null);
+
+    const res = await fetch(`/api/montage/projects/${projectId}/import-drive`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: driveUrl.trim() }),
+    });
+    const data: {
+      created?: { id: string; originalName: string }[];
+      rejected?: { name: string; reason: string }[];
+      truncated?: boolean;
+      error?: string;
+    } = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setDriveError(data.error ?? "Import failed");
+      setImportingDrive(false);
+      return;
+    }
+
+    setAssets((prev) => [
+      ...prev,
+      ...(data.created ?? []).map((c) => ({
+        id: c.id,
+        originalName: c.originalName,
+        type: (/\.(jpg|jpeg|png|webp|heic)$/i.test(c.originalName) ? "PHOTO" : "VIDEO") as "PHOTO" | "VIDEO",
+        status: "PENDING" as AssetStatus,
+      })),
+    ]);
+
+    if (data.rejected && data.rejected.length > 0) {
+      setDriveError(`Imported ${data.created?.length ?? 0}, skipped ${data.rejected.length} (unsupported type or too large).`);
+    } else if (data.truncated) {
+      setDriveError(`Imported the first ${data.created?.length ?? 0} files — that folder has more than this import limit.`);
+    }
+
+    setDriveUrl("");
+    setImportingDrive(false);
   }
 
   async function collectFilesFromDataTransfer(dataTransfer: DataTransfer): Promise<File[]> {
@@ -219,6 +266,28 @@ export function MontageWorkspace({
               </p>
             </div>
           )}
+
+          <div className="mx-auto mt-6 flex max-w-md items-center gap-2 border-t border-neutral-800 pt-5">
+            <DriveIcon className="h-4 w-4 shrink-0 text-neutral-500" />
+            <input
+              type="url"
+              value={driveUrl}
+              onChange={(e) => setDriveUrl(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && importFromDrive()}
+              placeholder="Paste a Google Drive folder link"
+              className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-white outline-none transition focus:border-violet-500"
+            />
+            <button
+              type="button"
+              onClick={importFromDrive}
+              disabled={!driveUrl.trim() || importingDrive}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {importingDrive && <SpinnerIcon className="h-3.5 w-3.5" />}
+              {importingDrive ? "Importing…" : "Import"}
+            </button>
+          </div>
+          {driveError && <p className="mx-auto mt-2 max-w-md text-xs text-amber-400">{driveError}</p>}
         </div>
 
         {assets.length > 0 && (
