@@ -19,12 +19,20 @@ const MIME_EXT: Record<string, string> = {
   "image/heic": ".heic",
 };
 
-export function parseDriveFolderId(url: string): string | null {
-  const patterns = [/\/folders\/([a-zA-Z0-9_-]+)/, /[?&]id=([a-zA-Z0-9_-]+)/];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
+export type DriveLink = { type: "folder"; id: string } | { type: "file"; id: string };
+
+/** Accepts a folder link (drive.google.com/drive/folders/<id>), a single-file
+ * "view" link (drive.google.com/file/d/<id>/view), or an "open?id=" link. */
+export function parseDriveLink(url: string): DriveLink | null {
+  const folderMatch = url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (folderMatch) return { type: "folder", id: folderMatch[1] };
+
+  const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (fileMatch) return { type: "file", id: fileMatch[1] };
+
+  const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idMatch) return { type: "file", id: idMatch[1] };
+
   return null;
 }
 
@@ -35,6 +43,20 @@ export interface DriveFile {
 }
 
 export class DriveAccessError extends Error {}
+
+export async function getDriveFile(fileId: string, apiKey: string): Promise<DriveFile> {
+  const params = new URLSearchParams({ fields: "id, name, mimeType", key: apiKey });
+  const res = await fetch(`${DRIVE_API}/${fileId}?${params.toString()}`);
+  if (!res.ok) {
+    if (res.status === 403 || res.status === 404) {
+      throw new DriveAccessError(
+        "Couldn't access that file. Make sure it's shared as \"Anyone with the link can view.\"",
+      );
+    }
+    throw new Error(`Google Drive API error: ${res.status} ${await res.text().catch(() => "")}`);
+  }
+  return (await res.json()) as DriveFile;
+}
 
 export async function listDriveFolderFiles(folderId: string, apiKey: string): Promise<{ files: DriveFile[]; truncated: boolean }> {
   const files: DriveFile[] = [];
@@ -76,7 +98,7 @@ export async function listDriveFolderFiles(folderId: string, apiKey: string): Pr
   return { files, truncated };
 }
 
-function isImportable(mimeType: string) {
+export function isImportable(mimeType: string) {
   return mimeType.startsWith("video/") || mimeType.startsWith("image/");
 }
 

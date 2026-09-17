@@ -3,7 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { ensureProjectDirs, safeExt } from "@/lib/montage/storage";
 import { saveMontageAsset } from "@/lib/montage/assets";
-import { DriveAccessError, downloadDriveFile, extForMimeType, listDriveFolderFiles, parseDriveFolderId } from "@/lib/montage/google-drive";
+import {
+  DriveAccessError,
+  DriveFile,
+  downloadDriveFile,
+  extForMimeType,
+  getDriveFile,
+  isImportable,
+  listDriveFolderFiles,
+  parseDriveLink,
+} from "@/lib/montage/google-drive";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: projectId } = await params;
@@ -27,24 +36,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Paste a Google Drive folder link" }, { status: 400 });
   }
 
-  const folderId = parseDriveFolderId(url);
-  if (!folderId) {
-    return NextResponse.json({ error: "That doesn't look like a Google Drive folder link" }, { status: 400 });
+  const link = parseDriveLink(url);
+  if (!link) {
+    return NextResponse.json({ error: "That doesn't look like a Google Drive file or folder link" }, { status: 400 });
   }
 
-  let files, truncated;
+  let files: DriveFile[] = [];
+  let truncated = false;
   try {
-    ({ files, truncated } = await listDriveFolderFiles(folderId, apiKey));
+    if (link.type === "folder") {
+      ({ files, truncated } = await listDriveFolderFiles(link.id, apiKey));
+    } else {
+      const file = await getDriveFile(link.id, apiKey);
+      if (isImportable(file.mimeType)) files = [file];
+    }
   } catch (err) {
     if (err instanceof DriveAccessError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    console.error("[montage] drive list failed", err);
-    return NextResponse.json({ error: "Couldn't read that Drive folder. Try again in a moment." }, { status: 502 });
+    console.error("[montage] drive lookup failed", err);
+    return NextResponse.json({ error: "Couldn't read that from Drive. Try again in a moment." }, { status: 502 });
   }
 
   if (files.length === 0) {
-    return NextResponse.json({ error: "No videos or photos found in that folder" }, { status: 400 });
+    return NextResponse.json({ error: "No videos or photos found at that link" }, { status: 400 });
   }
 
   await ensureProjectDirs(projectId);

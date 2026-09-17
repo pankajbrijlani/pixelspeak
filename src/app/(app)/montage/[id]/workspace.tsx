@@ -274,7 +274,7 @@ export function MontageWorkspace({
               value={driveUrl}
               onChange={(e) => setDriveUrl(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && importFromDrive()}
-              placeholder="Paste a Google Drive folder link"
+              placeholder="Paste a Google Drive file or folder link"
               className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-white outline-none transition focus:border-violet-500"
             />
             <button
