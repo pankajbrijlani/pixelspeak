@@ -5,6 +5,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { parseLeadsCsv } from "@/lib/csv";
 import { requireUserId } from "@/lib/session";
+import {
+  searchApolloPeople,
+  revealApolloPerson,
+  ApolloApiError,
+  type ApolloProspect,
+  type ApolloSearchParams,
+} from "@/lib/apollo";
 
 export async function uploadLeadsCsv(formData: FormData) {
   const userId = await requireUserId();
@@ -63,4 +70,114 @@ export async function deleteLead(id: string, listId: string) {
   if (!list) throw new Error("Not found");
   await prisma.lead.delete({ where: { id } });
   revalidatePath(`/leads/${listId}`);
+}
+
+export type ProspectSearchResult =
+  | { ok: true; prospects: ApolloProspect[]; totalEntries: number }
+  | { ok: false; error: string };
+
+export async function searchProspects(
+  params: ApolloSearchParams
+): Promise<ProspectSearchResult> {
+  const userId = await requireUserId();
+  const provider = await prisma.leadProvider.findFirst({
+    where: { userId, provider: "apollo", isActive: true },
+  });
+  if (!provider) {
+    return { ok: false, error: "Connect Apollo in Settings first." };
+  }
+  if (params.jobTitles.length === 0 && params.locations.length === 0 && !params.keywords) {
+    return { ok: false, error: "Add at least a job title, location, or keyword." };
+  }
+
+  try {
+    const result = await searchApolloPeople(provider, params);
+    return { ok: true, ...result };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof ApolloApiError ? err.message : "Apollo search failed.",
+    };
+  }
+}
+
+export type ImportProspectInput = {
+  apolloId: string;
+  firstName?: string;
+  lastName?: string;
+  title?: string;
+  company?: string;
+  companyWebsite?: string;
+  location?: string;
+  linkedinUrl?: string;
+};
+
+export type ImportProspectsResult =
+  | { ok: true; imported: number; skipped: number; listId: string }
+  | { ok: false; error: string };
+
+export async function importProspects(input: {
+  listName: string;
+  existingListId?: string;
+  prospects: ImportProspectInput[];
+}): Promise<ImportProspectsResult> {
+  const userId = await requireUserId();
+  const provider = await prisma.leadProvider.findFirst({
+    where: { userId, provider: "apollo", isActive: true },
+  });
+  if (!provider) {
+    return { ok: false, error: "Connect Apollo in Settings first." };
+  }
+  if (input.prospects.length === 0) {
+    return { ok: false, error: "Select at least one prospect to import." };
+  }
+
+  let listId = input.existingListId;
+  if (listId) {
+    const owned = await prisma.leadList.findFirst({ where: { id: listId, userId } });
+    if (!owned) return { ok: false, error: "List not found." };
+  } else {
+    const list = await prisma.leadList.create({
+      data: {
+        userId,
+        name: input.listName || `Apollo search ${new Date().toLocaleDateString()}`,
+        source: "apollo",
+      },
+    });
+    listId = list.id;
+  }
+
+  let imported = 0;
+  let skipped = 0;
+
+  for (const prospect of input.prospects) {
+    try {
+      const { email } = await revealApolloPerson(provider, prospect.apolloId);
+      if (!email) {
+        skipped += 1;
+        continue;
+      }
+      await prisma.lead.upsert({
+        where: { leadListId_email: { leadListId: listId, email: email.toLowerCase() } },
+        update: {},
+        create: {
+          leadListId: listId,
+          email: email.toLowerCase(),
+          firstName: prospect.firstName,
+          lastName: prospect.lastName,
+          company: prospect.company,
+          title: prospect.title,
+          website: prospect.companyWebsite,
+          linkedinUrl: prospect.linkedinUrl,
+        },
+      });
+      imported += 1;
+    } catch {
+      skipped += 1;
+    }
+  }
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${listId}`);
+  return { ok: true, imported, skipped, listId };
 }

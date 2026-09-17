@@ -16,16 +16,21 @@ export default async function LeadsPage() {
     <div className="mx-auto max-w-4xl">
       <PageHeader
         title="Leads"
-        description="Upload a CSV of prospects to build a list you can enroll into a cold email campaign."
+        description="Upload a CSV of prospects, or search Apollo.io to find new ones — either way you get a list you can enroll into a cold email campaign."
+        action={
+          <Link href="/leads/find">
+            <Button variant="secondary">Find leads on Apollo</Button>
+          </Link>
+        }
       />
 
       <Card className="mb-8">
         <h2 className="text-sm font-semibold text-white">Import a CSV</h2>
         <p className="mt-1 text-sm text-neutral-400">
-          Needs at minimum an <code>email</code> column. We&apos;ll also pick up first
-          name, last name, company, title, website, phone, and LinkedIn URL columns
-          automatically — anything else is kept as a custom field you can use in
-          templates.
+          Already have a list? Needs at minimum an <code>email</code> column. We&apos;ll
+          also pick up first name, last name, company, title, website, phone, and
+          LinkedIn URL columns automatically — anything else is kept as a custom field
+          you can use in templates.
         </p>
         <form action={uploadLeadsCsv} className="mt-4 flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-[180px]">

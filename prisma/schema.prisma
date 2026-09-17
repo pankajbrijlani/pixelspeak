@@ -24,6 +24,7 @@ model User {
   leadLists     LeadList[]
   campaigns     Campaign[]
   adAccounts    AdAccount[]
+  leadProviders LeadProvider[]
 }
 
 model Account {
@@ -81,6 +82,23 @@ model EmailAccount {
   campaigns Campaign[]
 
   @@unique([userId, emailAddress])
+}
+
+// ---------- Lead data providers (search-based sourcing) ----------
+
+// A connected third-party prospecting API (e.g. Apollo.io) used to search
+// for and pull in new leads by criteria, as an alternative to CSV upload.
+model LeadProvider {
+  id          String   @id @default(cuid())
+  userId      String
+  provider    String   @default("apollo") // apollo | (future: hunter, peopledatalabs, ...)
+  apiKey      String   @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
 }
 
 // ---------- Leads ----------

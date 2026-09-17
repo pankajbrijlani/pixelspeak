@@ -83,7 +83,8 @@ export default async function DashboardPage() {
               1. <Link href="/settings" className="text-violet-400 hover:underline">Connect your Gmail</Link> and, optionally, a Meta ad account.
             </li>
             <li>
-              2. <Link href="/leads" className="text-violet-400 hover:underline">Upload a CSV</Link> of prospects.
+              2. <Link href="/leads/find" className="text-violet-400 hover:underline">Find leads on Apollo</Link>{" "}
+              or <Link href="/leads" className="text-violet-400 hover:underline">upload a CSV</Link> of prospects.
             </li>
             <li>
               3. <Link href="/campaigns/new" className="text-violet-400 hover:underline">Build a cold email sequence</Link> and enroll the list.

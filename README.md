@@ -7,10 +7,11 @@ one dashboard.
 
 ## What it does
 
-- **Leads** — import prospects from a CSV (email + optional name, company,
-  title, website, phone, LinkedIn, and any custom columns). No scraping —
-  bring your own list (exports from a data provider, a form, a spreadsheet
-  you've built up).
+- **Leads** — either search Apollo.io by job title/location/keyword to find
+  new prospects, or import a CSV you already have (email + optional name,
+  company, title, website, phone, LinkedIn, and any custom columns). No
+  scraping — sourcing goes through Apollo's own API or a list you bring, not
+  us pulling data off LinkedIn/Google against their terms.
 - **Cold email** — build a multi-step sequence (initial email + timed
   follow-ups) with `{{firstName}}`, `{{company}}`, etc. personalization
   tokens. Emails send through your connected Gmail account via the Gmail
@@ -29,7 +30,8 @@ login is a single owner account you create yourself.
 
 Next.js (App Router) · TypeScript · Tailwind · Postgres + Prisma ·
 NextAuth (credentials login) · Gmail API (googleapis) · Meta Marketing API
-(Graph API) · Vercel Cron for the send scheduler.
+(Graph API) · Apollo.io API (lead search) · Vercel Cron for the send
+scheduler.
 
 ## Setup
 
@@ -91,7 +93,26 @@ automatic reply detection, that needs the `gmail.readonly` (or
 `gmail.modify`) scope added — a reasonable next step, but a bigger trust
 footprint on your inbox.
 
-### 5. Meta ad account (optional, for Meta Ads)
+### 5. Apollo.io (optional, for finding leads instead of CSV upload)
+
+By default there's no built-in lead sourcing — you bring a CSV. If you'd
+rather search for prospects by job title/location/keyword from inside the
+app:
+
+1. Sign up at [apollo.io](https://apollo.io). Search-and-reveal via the API
+   needs a plan with API access (check Apollo's current pricing — their
+   free tier historically doesn't include it).
+2. **Settings (in Apollo) → Integrations → API** — generate an API key.
+3. In the app, go to **Settings** and paste it into **Lead search
+   (Apollo.io)**.
+4. Use **Leads → Find leads on Apollo** to search, then select the people
+   you want and import them into a list.
+
+Apollo bills its own credits per revealed email address (separate from
+anything in this app) — the import flow only reveals emails for contacts
+you explicitly select, and shows how many that will use before you confirm.
+
+### 6. Meta ad account (optional, for Meta Ads)
 
 The ads feature uses a Meta **System User access token** rather than a full
 OAuth app-review flow (which requires Meta's business verification and app
@@ -111,13 +132,13 @@ overkill for driving your own account).
 Until you add a token, ad campaigns can still be drafted in the UI but the
 **Launch** button stays disabled — nothing reaches Meta.
 
-### 6. Run it
+### 7. Run it
 
 ```bash
 npm run dev
 ```
 
-### 7. Sending on a schedule
+### 8. Sending on a schedule
 
 Cold emails don't send instantly — a scheduler processes due sends. In
 production this is a cron hitting `GET /api/cron/process-queue` with header
@@ -147,6 +168,7 @@ production this is a cron hitting `GET /api/cron/process-queue` with header
 prisma/schema.prisma        Data model (leads, campaigns, steps, ad campaigns, ...)
 src/lib/mailer.ts            Gmail API sending
 src/lib/meta.ts              Meta Marketing API calls
+src/lib/apollo.ts            Apollo.io people search + email reveal
 src/lib/campaign-engine.ts   Core scheduler: picks due sends, sends, reschedules
 src/lib/schedule.ts          Timezone-aware send-window math
 src/lib/template.ts          {{token}} personalization

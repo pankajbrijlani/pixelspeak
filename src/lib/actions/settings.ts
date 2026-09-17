@@ -58,3 +58,28 @@ export async function removeAdAccount(id: string) {
   revalidatePath("/settings");
   revalidatePath("/ads");
 }
+
+export async function connectLeadProvider(formData: FormData) {
+  const userId = await requireUserId();
+  const apiKey = String(formData.get("apiKey") ?? "").trim();
+
+  if (!apiKey) {
+    throw new Error("API key is required");
+  }
+
+  await prisma.leadProvider.upsert({
+    where: { userId_provider: { userId, provider: "apollo" } },
+    update: { apiKey: encryptSecret(apiKey), isActive: true },
+    create: { userId, provider: "apollo", apiKey: encryptSecret(apiKey) },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/leads/find");
+}
+
+export async function removeLeadProvider(id: string) {
+  const userId = await requireUserId();
+  await prisma.leadProvider.deleteMany({ where: { id, userId } });
+  revalidatePath("/settings");
+  revalidatePath("/leads/find");
+}

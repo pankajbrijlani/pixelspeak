@@ -7,6 +7,8 @@ import {
   toggleEmailAccount,
   connectAdAccount,
   removeAdAccount,
+  connectLeadProvider,
+  removeLeadProvider,
 } from "@/lib/actions/settings";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -28,10 +30,12 @@ export default async function SettingsPage({
   const error = typeof params.error === "string" ? params.error : undefined;
   const connected = typeof params.connected === "string" ? params.connected : undefined;
 
-  const [emailAccounts, adAccounts] = await Promise.all([
+  const [emailAccounts, adAccounts, leadProviders] = await Promise.all([
     prisma.emailAccount.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
     prisma.adAccount.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    prisma.leadProvider.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
   ]);
+  const apollo = leadProviders.find((p) => p.provider === "apollo");
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -96,6 +100,47 @@ export default async function SettingsPage({
               </li>
             ))}
           </ul>
+        )}
+      </Card>
+
+      <Card className="mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-white">Lead search (Apollo.io)</h2>
+            <p className="mt-1 text-sm text-neutral-400">
+              Search for prospects by job title, location, and company instead of
+              uploading a CSV. Needs an Apollo account with API access &mdash; grab
+              your key from{" "}
+              <span className="text-neutral-300">
+                Apollo &rarr; Settings &rarr; Integrations &rarr; API
+              </span>
+              . Apollo bills credits per revealed email address, separate from this
+              app.
+            </p>
+          </div>
+          {apollo && <Badge tone="green">Connected</Badge>}
+        </div>
+
+        <form action={connectLeadProvider} className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[220px]">
+            <label className="block text-xs font-medium text-neutral-400">
+              Apollo API key
+            </label>
+            <input
+              name="apiKey"
+              type="password"
+              placeholder={apollo ? "•••••••••••••••• (saved — paste to replace)" : "your Apollo API key"}
+              className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-violet-500"
+            />
+          </div>
+          <Button type="submit">{apollo ? "Update key" : "Connect"}</Button>
+        </form>
+        {apollo && (
+          <form action={removeLeadProvider.bind(null, apollo.id)} className="mt-3">
+            <Button variant="danger" type="submit">
+              Remove
+            </Button>
+          </form>
         )}
       </Card>
 
