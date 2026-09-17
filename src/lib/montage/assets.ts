@@ -4,7 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { assetPath, safeExt } from "./storage";
 
 const VIDEO_EXTS = new Set([".mp4", ".mov", ".m4v", ".webm", ".avi", ".mkv"]);
-export const MAX_ASSET_FILE_BYTES = 500 * 1024 * 1024;
+// Raw source footage (a single long clip, high-bitrate 4K, etc.) can
+// legitimately be multi-gigabyte; this just guards against something
+// absurd rather than realistically-sized raw footage.
+export const MAX_ASSET_FILE_BYTES = 4 * 1024 * 1024 * 1024;
 
 export type SaveAssetResult =
   | { ok: true; id: string; originalName: string }
