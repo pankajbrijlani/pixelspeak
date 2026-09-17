@@ -2,16 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { ensureProjectDirs, safeExt } from "@/lib/montage/storage";
-import { saveMontageAsset } from "@/lib/montage/assets";
+import { createMontageAssetRecord, MAX_ASSET_FILE_BYTES, planMontageAsset } from "@/lib/montage/assets";
 import {
   DriveAccessError,
   DriveFile,
-  downloadDriveFile,
+  DriveFileTooLargeError,
   extForMimeType,
   getDriveFile,
   isImportable,
   listDriveFolderFiles,
   parseDriveLink,
+  streamDriveFileToDisk,
 } from "@/lib/montage/google-drive";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -80,17 +81,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       name = `${name}${inferredExt}`;
     }
 
+    const planned = planMontageAsset(projectId, name);
+    if (!planned) {
+      rejected.push({ name, reason: "Unsupported file type" });
+      continue;
+    }
+
     try {
-      const bytes = await downloadDriveFile(file.id, apiKey);
-      const result = await saveMontageAsset(projectId, name, bytes, file.mimeType, existingCount + created.length + rejected.length);
-      if (result.ok) {
-        created.push({ id: result.id, originalName: result.originalName });
-      } else {
-        rejected.push({ name: result.name, reason: result.reason });
-      }
+      await streamDriveFileToDisk(file.id, apiKey, planned.destination, MAX_ASSET_FILE_BYTES);
+      await createMontageAssetRecord({
+        ...planned,
+        projectId,
+        originalName: name,
+        mimeType: file.mimeType,
+        captureOrder: existingCount + created.length + rejected.length,
+      });
+      created.push({ id: planned.id, originalName: name });
     } catch (err) {
-      console.error(`[montage] drive download failed for ${file.id}`, err);
-      rejected.push({ name, reason: "Download failed" });
+      if (err instanceof DriveFileTooLargeError) {
+        rejected.push({ name, reason: err.message });
+      } else {
+        console.error(`[montage] drive download failed for ${file.id}`, err);
+        rejected.push({ name, reason: "Download failed" });
+      }
     }
   }
 

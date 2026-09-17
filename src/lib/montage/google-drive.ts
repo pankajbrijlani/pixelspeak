@@ -1,3 +1,9 @@
+import { createWriteStream } from "node:fs";
+import { rm } from "node:fs/promises";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream as NodeWebReadableStream } from "node:stream/web";
+
 // Public-folder Google Drive import. Deliberately API-key based rather than
 // OAuth: an OAuth consent flow for Drive scopes needs Google app review and
 // per-user token storage, which is a lot of machinery for "grab some clips
@@ -106,10 +112,42 @@ export function extForMimeType(mimeType: string): string | null {
   return MIME_EXT[mimeType] ?? null;
 }
 
-export async function downloadDriveFile(fileId: string, apiKey: string): Promise<Buffer> {
+export class DriveFileTooLargeError extends Error {}
+
+/** Streams a Drive file's bytes straight to disk — never buffers the whole
+ * file in memory, since raw footage can be multi-gigabyte. */
+export async function streamDriveFileToDisk(
+  fileId: string,
+  apiKey: string,
+  destination: string,
+  maxBytes: number,
+): Promise<void> {
   const res = await fetch(`${DRIVE_API}/${fileId}?alt=media&key=${apiKey}`);
-  if (!res.ok) {
+  if (!res.ok || !res.body) {
     throw new Error(`Failed to download file ${fileId}: ${res.status}`);
   }
-  return Buffer.from(await res.arrayBuffer());
+
+  const contentLength = Number(res.headers.get("content-length") ?? "0");
+  if (contentLength > maxBytes) {
+    await res.body.cancel().catch(() => {});
+    throw new DriveFileTooLargeError(
+      `File is ${(contentLength / 1024 ** 3).toFixed(1)}GB, over the ${(maxBytes / 1024 ** 3).toFixed(1)}GB import limit`,
+    );
+  }
+
+  const source = Readable.fromWeb(res.body as NodeWebReadableStream);
+  let written = 0;
+  source.on("data", (chunk: Buffer) => {
+    written += chunk.length;
+    if (written > maxBytes) {
+      source.destroy(new DriveFileTooLargeError("File exceeded the size limit while downloading"));
+    }
+  });
+
+  try {
+    await pipeline(source, createWriteStream(destination));
+  } catch (err) {
+    await rm(destination, { force: true });
+    throw err;
+  }
 }
