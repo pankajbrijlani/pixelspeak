@@ -2,23 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
-import { Card, PageHeader, Badge, Button } from "@/lib/ui";
+import { Card, PageHeader, Badge, Button, coerceBadgeTone } from "@/lib/ui";
 import { deleteExpense } from "@/lib/actions/expenses";
+import { formatMoney } from "@/lib/money";
 import type { Prisma } from "@prisma/client";
-
-function formatMoney(amount: Prisma.Decimal | number, currency: string) {
-  return new Intl.NumberFormat("en-CA", { style: "currency", currency }).format(
-    Number(amount)
-  );
-}
-
-type BadgeTone = "neutral" | "green" | "amber" | "red" | "violet";
-const BADGE_TONES: readonly BadgeTone[] = ["neutral", "green", "amber", "red", "violet"];
-function badgeTone(color: string | undefined): BadgeTone {
-  return (BADGE_TONES as readonly string[]).includes(color ?? "")
-    ? (color as BadgeTone)
-    : "neutral";
-}
 
 export default async function ExpensesPage({
   searchParams,
@@ -61,6 +48,9 @@ export default async function ExpensesPage({
         description="Snap a photo of a receipt and log it against a category. Everyone with a login sees the same shared record."
         action={
           <div className="flex gap-2">
+            <Link href="/expenses/reports">
+              <Button variant="secondary">Monthly &amp; yearly report</Button>
+            </Link>
             <Link href="/expenses/categories">
               <Button variant="secondary">Manage categories</Button>
             </Link>
@@ -160,7 +150,7 @@ export default async function ExpensesPage({
                     <p className="text-sm font-medium text-white">
                       {expense.vendor || "Untitled expense"}
                     </p>
-                    <Badge tone={badgeTone(expense.category?.color)}>
+                    <Badge tone={coerceBadgeTone(expense.category?.color)}>
                       {expense.category?.name ?? "Uncategorized"}
                     </Badge>
                   </div>

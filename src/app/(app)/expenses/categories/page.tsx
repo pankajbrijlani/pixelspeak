@@ -1,18 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
-import { Card, PageHeader, Badge, Button } from "@/lib/ui";
+import { Card, PageHeader, Badge, Button, BADGE_TONES, coerceBadgeTone } from "@/lib/ui";
 import {
   createExpenseCategory,
   renameExpenseCategory,
   deleteExpenseCategory,
 } from "@/lib/actions/expense-categories";
 
-const COLORS = ["violet", "green", "amber", "red", "neutral"] as const;
-type BadgeColor = (typeof COLORS)[number];
-function badgeTone(color: string): BadgeColor {
-  return (COLORS as readonly string[]).includes(color) ? (color as BadgeColor) : "neutral";
-}
+const COLORS = BADGE_TONES;
 
 export default async function ExpenseCategoriesPage() {
   await requireUserId();
@@ -92,7 +88,7 @@ export default async function ExpenseCategoriesPage() {
                     ))}
                   </select>
                 </div>
-                <Badge tone={badgeTone(category.color)}>{category._count.expenses} expenses</Badge>
+                <Badge tone={coerceBadgeTone(category.color)}>{category._count.expenses} expenses</Badge>
                 <Button type="submit" variant="secondary">
                   Save
                 </Button>

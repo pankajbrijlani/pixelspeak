@@ -38,12 +38,21 @@ export function PageHeader({
   );
 }
 
+export type BadgeTone = "neutral" | "green" | "amber" | "red" | "violet";
+export const BADGE_TONES: readonly BadgeTone[] = ["neutral", "green", "amber", "red", "violet"];
+
+export function coerceBadgeTone(value: string | null | undefined): BadgeTone {
+  return (BADGE_TONES as readonly string[]).includes(value ?? "")
+    ? (value as BadgeTone)
+    : "neutral";
+}
+
 export function Badge({
   children,
   tone = "neutral",
 }: {
   children: React.ReactNode;
-  tone?: "neutral" | "green" | "amber" | "red" | "violet";
+  tone?: BadgeTone;
 }) {
   const tones: Record<string, string> = {
     neutral: "bg-neutral-800 text-neutral-300",
