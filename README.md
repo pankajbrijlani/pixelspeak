@@ -22,6 +22,11 @@ one dashboard.
   until you explicitly go live).
 - **Dashboard** — leads, sent/open/reply rates, active campaigns and ads in
   one view.
+- **Expenses** (Creative Sprouts) — snap a photo of a receipt, log the
+  amount/date/vendor, and file it under a category. Categories can be
+  renamed, recolored, or deleted at any time. Every account with a login
+  (owner + employees) sees and edits the same shared set of records, so it
+  works as a simple shared expense log for a small team.
 
 It's built for one operator (you) rather than a public multi-tenant SaaS —
 login is a single owner account you create yourself.
@@ -31,7 +36,7 @@ login is a single owner account you create yourself.
 Next.js (App Router) · TypeScript · Tailwind · Postgres + Prisma ·
 NextAuth (credentials login) · Gmail API (googleapis) · Meta Marketing API
 (Graph API) · Apollo.io API (lead search) · Vercel Cron for the send
-scheduler.
+scheduler · Vercel Blob for receipt photo storage.
 
 ## Setup
 
@@ -53,6 +58,8 @@ Fill in `.env`:
 - `META_APP_ID` / `META_APP_SECRET` — only needed if you later want a full
   OAuth connect flow for Meta; the current build uses a pasted System User
   token instead (see below), so these are optional.
+- `BLOB_READ_WRITE_TOKEN` — only needed for the Expenses feature's receipt
+  photo uploads (see step 9 below). Everything else works without it.
 
 ### 2. Database
 
@@ -67,6 +74,10 @@ There's no public sign-up — create your own account from the server:
 ```bash
 npm run create-user -- you@pixelsspeak.com "a strong password" "Your Name"
 ```
+
+To give an employee access (e.g. so they can log Expenses), run the same
+command with their email — every logged-in account sees the same shared
+Expenses data.
 
 ### 4. Google Cloud project (for sending cold email via Gmail)
 
@@ -132,13 +143,32 @@ overkill for driving your own account).
 Until you add a token, ad campaigns can still be drafted in the UI but the
 **Launch** button stays disabled — nothing reaches Meta.
 
-### 7. Run it
+### 7. Vercel Blob (for the Expenses receipt photos)
+
+Receipt photos are stored in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)
+rather than in Postgres, so the database stays fast and cheap over years of
+receipts. Expense records (amount, category, date, vendor, note) live in
+Postgres alongside the rest of the app's data and are unaffected by this.
+
+1. On Vercel: **Storage → Create → Blob**, attach it to this project, then
+   copy the generated `BLOB_READ_WRITE_TOKEN` into your env vars (Vercel
+   does this automatically when the store is connected).
+2. Running locally: `vercel env pull .env` after connecting the store, or
+   generate a token from the store's **Settings** tab and set
+   `BLOB_READ_WRITE_TOKEN` in `.env` yourself.
+
+Without this token, the rest of the app works normally but adding an
+expense will show an error asking you to set it up. Uploaded receipts are
+stored at an unguessable URL (not indexed or listed publicly) — treat that
+URL as anyone-with-the-link access, same as a shared Drive file.
+
+### 8. Run it
 
 ```bash
 npm run dev
 ```
 
-### 8. Sending on a schedule
+### 9. Sending on a schedule
 
 Cold emails don't send instantly — a scheduler processes due sends. In
 production this is a cron hitting `GET /api/cron/process-queue` with header
@@ -173,8 +203,9 @@ src/lib/campaign-engine.ts   Core scheduler: picks due sends, sends, reschedules
 src/lib/schedule.ts          Timezone-aware send-window math
 src/lib/template.ts          {{token}} personalization
 src/lib/csv.ts                CSV → lead parsing/column mapping
+src/lib/blob.ts               Vercel Blob upload/delete for receipt photos
 src/lib/actions/*            Server actions (forms call these directly)
-src/app/(app)/*              Authenticated pages (dashboard, leads, campaigns, ads, settings)
+src/app/(app)/*              Authenticated pages (dashboard, leads, campaigns, ads, expenses, settings)
 src/app/api/cron/*           Scheduler endpoint
 src/app/api/connect/google/* Gmail OAuth connect flow
 src/app/api/track/open/*     Open-tracking pixel

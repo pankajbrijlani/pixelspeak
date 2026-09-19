@@ -25,6 +25,7 @@ model User {
   campaigns     Campaign[]
   adAccounts    AdAccount[]
   leadProviders LeadProvider[]
+  expenses      Expense[]
 }
 
 model Account {
@@ -312,4 +313,40 @@ model AdCampaign {
   updatedAt       DateTime          @updatedAt
 
   adAccount AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Creative Sprouts: expense tracking ----------
+//
+// Shared across everyone with a login (owner + employees) — expenses aren't
+// scoped to a single userId the way leads/campaigns are, so the whole team
+// sees and manages one shared set of records and categories.
+
+model ExpenseCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("violet") // matches Badge tones in src/lib/ui.tsx
+  createdAt DateTime @default(now())
+
+  expenses Expense[]
+}
+
+model Expense {
+  id            String    @id @default(cuid())
+  categoryId    String?
+  amount        Decimal   @db.Decimal(10, 2)
+  currency      String    @default("CAD")
+  vendor        String?
+  note          String?   @db.Text
+  expenseDate   DateTime  @default(now())
+  receiptUrl    String
+  receiptPath   String // Vercel Blob pathname, used to delete the file on removal
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  category  ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdBy User             @relation(fields: [createdById], references: [id])
+
+  @@index([categoryId])
+  @@index([expenseDate])
 }
