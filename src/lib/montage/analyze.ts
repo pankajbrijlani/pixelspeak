@@ -1,7 +1,7 @@
 import path from "node:path";
 import { mkdir, rm } from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
-import { detectScenes, detectSilence, extractAudio, extractThumbnail, probe } from "./ffmpeg";
+import { detectScenes, detectSilence, ensureFaststart, extractAudio, extractThumbnail, probe } from "./ffmpeg";
 import { analyzePhoto } from "./photo";
 import { transcribeAudio } from "./transcribe";
 import { projectDir, thumbnailPath } from "./storage";
@@ -25,6 +25,11 @@ export async function analyzeAsset(assetId: string) {
 
   try {
     if (asset.type === "VIDEO") {
+      // Must happen before anything else touches this file: rendering later
+      // fetches it over HTTP and needs the seek index at the front, which
+      // camera/drone-recorded MP4s often don't have.
+      await ensureFaststart(asset.storagePath);
+
       const { durationSec, width, height } = await probe(asset.storagePath);
       const [scenes, silences] = await Promise.all([
         detectScenes(asset.storagePath),

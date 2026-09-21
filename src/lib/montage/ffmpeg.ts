@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { open, rename } from "node:fs/promises";
 import ffmpegPath from "ffmpeg-static";
 import ffprobeStatic from "ffprobe-static";
 
@@ -100,6 +101,68 @@ export async function extractAudio(filePath: string, outWavPath: string) {
 
 export async function extractThumbnail(filePath: string, atSec: number, outJpgPath: string) {
   await runFfmpeg(["-y", "-ss", String(Math.max(0, atSec)), "-i", filePath, "-frames:v", "1", "-q:v", "3", outJpgPath]);
+}
+
+/**
+ * Camera/drone-recorded MP4s commonly put the `moov` atom (the seek index)
+ * after `mdat` (the media data) instead of before it — fine for local
+ * ffmpeg access (which is how analysis reads the file), but it breaks
+ * efficient seeking for anything consuming the file over HTTP, which is
+ * how Remotion's renderer pulls frames. Checks by walking top-level boxes
+ * (cheap: only reads 8-16 bytes per box, not file content) rather than
+ * assuming every file needs remuxing.
+ */
+async function isFaststart(filePath: string): Promise<boolean> {
+  const fh = await open(filePath, "r");
+  try {
+    const stat = await fh.stat();
+    let offset = 0;
+    const header = Buffer.alloc(8);
+    while (offset < stat.size) {
+      const { bytesRead } = await fh.read(header, 0, 8, offset);
+      if (bytesRead < 8) break;
+      let size = header.readUInt32BE(0);
+      const type = header.toString("ascii", 4, 8);
+      if (type === "moov") return true;
+      if (type === "mdat") return false;
+      if (size === 1) {
+        const large = Buffer.alloc(8);
+        await fh.read(large, 0, 8, offset + 8);
+        size = Number(large.readBigUInt64BE(0));
+      }
+      if (size <= 0) break;
+      offset += size;
+    }
+    return true; // no mdat/moov found (unusual) — leave it alone rather than guess
+  } finally {
+    await fh.close();
+  }
+}
+
+// "faststart" (a moved-forward moov atom) is a QuickTime/MP4-family concept
+// only — .webm/.mkv/.avi use unrelated container formats and muxers.
+const FASTSTART_MUXER: Record<string, string> = {
+  ".mp4": "mp4",
+  ".m4v": "mp4",
+  ".mov": "mov",
+};
+
+/** Remuxes (no re-encode) so the seek index is at the front of the file, in place. No-op for non-MP4-family containers. */
+export async function ensureFaststart(filePath: string): Promise<void> {
+  const ext = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
+  const muxer = FASTSTART_MUXER[ext];
+  if (!muxer) return;
+  if (await isFaststart(filePath)) return;
+
+  const tmpPath = `${filePath}.faststart.tmp`;
+  // -f is required: ffmpeg infers the muxer from the output filename's
+  // extension, and ".tmp" isn't one it recognizes.
+  await execFileAsync(
+    FFMPEG_BIN,
+    ["-y", "-i", filePath, "-c", "copy", "-movflags", "+faststart", "-f", muxer, tmpPath],
+    { maxBuffer: MAX_BUFFER },
+  );
+  await rename(tmpPath, filePath);
 }
 
 // ffmpeg writes filter analysis output (scene/silence markers) to stderr and
