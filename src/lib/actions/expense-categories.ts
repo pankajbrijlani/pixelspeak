@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
+import { ensureCategoryDriveFolder, renameCategoryDriveFolder } from "@/lib/drive";
 
 const COLORS = ["neutral", "green", "amber", "red", "violet"] as const;
 
@@ -17,9 +18,10 @@ export async function createExpenseCategory(formData: FormData) {
   });
   if (existing) throw new Error("A category with that name already exists");
 
-  await prisma.expenseCategory.create({
+  const category = await prisma.expenseCategory.create({
     data: { name, color: COLORS.includes(color as (typeof COLORS)[number]) ? color : "violet" },
   });
+  await ensureCategoryDriveFolder(category.id);
   revalidatePath("/expenses/categories");
   revalidatePath("/expenses");
 }
@@ -39,6 +41,7 @@ export async function renameExpenseCategory(id: string, formData: FormData) {
     where: { id },
     data: { name, color: COLORS.includes(color as (typeof COLORS)[number]) ? color : "violet" },
   });
+  await renameCategoryDriveFolder(id, name);
   revalidatePath("/expenses/categories");
   revalidatePath("/expenses");
 }
@@ -46,7 +49,9 @@ export async function renameExpenseCategory(id: string, formData: FormData) {
 export async function deleteExpenseCategory(id: string) {
   await requireUserId();
   // Expenses in this category aren't deleted — they just fall back to
-  // "Uncategorized" (categoryId is nullable, see schema.prisma).
+  // "Uncategorized" (categoryId is nullable, see schema.prisma). The Drive
+  // subfolder is left alone too — anything dropped in it later just won't
+  // sync anymore, since nothing points at it as a category folder.
   await prisma.expenseCategory.delete({ where: { id } });
   revalidatePath("/expenses/categories");
   revalidatePath("/expenses");

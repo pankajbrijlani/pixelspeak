@@ -3,7 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
-import { Card, PageHeader, Button } from "@/lib/ui";
+import { Card, PageHeader, Button, Badge } from "@/lib/ui";
 import { updateExpense, deleteExpense } from "@/lib/actions/expenses";
 
 export default async function EditExpensePage({
@@ -19,13 +19,25 @@ export default async function EditExpensePage({
     prisma.expenseCategory.findMany({ orderBy: { name: "asc" } }),
   ]);
   if (!expense) notFound();
+  const needsReview = expense.amount === null;
 
   return (
     <div className="mx-auto max-w-lg">
       <Link href="/expenses" className="text-xs text-neutral-500 hover:text-neutral-300">
         &larr; Expenses
       </Link>
-      <PageHeader title="Edit expense" />
+      <PageHeader
+        title="Edit expense"
+        action={needsReview ? <Badge tone="amber">Needs review</Badge> : undefined}
+      />
+      {needsReview && (
+        <Card className="mb-6 border-amber-900 bg-amber-950/30">
+          <p className="text-sm text-amber-300">
+            This receipt was auto-imported from Drive — it just needs an amount
+            (and a vendor, if you want one) before it&apos;s a real expense.
+          </p>
+        </Card>
+      )}
 
       <Card>
         <div className="relative mb-4 h-40 w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
@@ -61,7 +73,8 @@ export default async function EditExpensePage({
                 step="0.01"
                 min="0.01"
                 required
-                defaultValue={Number(expense.amount)}
+                placeholder="0.00"
+                defaultValue={expense.amount ? Number(expense.amount) : undefined}
                 className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-violet-500"
               />
             </div>

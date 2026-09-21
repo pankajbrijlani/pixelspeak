@@ -343,10 +343,11 @@ model DriveConnection {
 }
 
 model ExpenseCategory {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  color     String   @default("violet") // matches Badge tones in src/lib/ui.tsx
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  name          String   @unique
+  color         String   @default("violet") // matches Badge tones in src/lib/ui.tsx
+  driveFolderId String?  @unique // the Drive subfolder (named after this category) receipts sync from
+  createdAt     DateTime @default(now())
 
   expenses Expense[]
 }
@@ -354,13 +355,16 @@ model ExpenseCategory {
 model Expense {
   id            String    @id @default(cuid())
   categoryId    String?
-  amount        Decimal   @db.Decimal(10, 2)
+  // Null means "needs review" — created by the Drive folder sync, where a
+  // photo was dropped in but nobody has typed an amount in yet.
+  amount        Decimal?  @db.Decimal(10, 2)
   currency      String    @default("CAD")
   vendor        String?
   note          String?   @db.Text
   expenseDate   DateTime  @default(now())
   receiptUrl    String // app-internal path that proxies the photo from Drive (/api/receipts/:fileId)
-  receiptPath   String // Google Drive file id — used to fetch/delete the photo
+  receiptPath   String    @unique // Google Drive file id — used to fetch/delete the photo, and to dedupe syncs
+  source        String    @default("manual") // manual | drive_sync
   createdById   String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

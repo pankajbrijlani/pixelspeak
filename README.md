@@ -22,12 +22,15 @@ one dashboard.
   until you explicitly go live).
 - **Dashboard** — leads, sent/open/reply rates, active campaigns and ads in
   one view.
-- **Expenses** (Creative Sprouts) — snap a photo of a receipt, log the
-  amount/date/vendor, and file it under a category. Categories can be
-  renamed, recolored, or deleted at any time. Every account with a login
-  (owner + employees) sees and edits the same shared set of records, so it
-  works as a simple shared expense log for a small team. Receipt photos are
-  stored in a Google Drive folder you connect, not a separate paid service.
+- **Expenses** (Creative Sprouts) — either add a receipt through the app
+  (photo + amount/date/vendor + category), or just drop the photo straight
+  into that category's folder in Drive — the app matches the folder name to
+  the category and creates the expense automatically. Drive-dropped
+  receipts land in a "needs review" state (categorized, but no amount yet)
+  until someone opens them and fills that in. Categories can be renamed,
+  recolored, or deleted at any time — the matching Drive folder is kept in
+  sync. Every account with a login (owner + employees) sees and edits the
+  same shared set of records.
 
 It's built for one operator (you) rather than a public multi-tenant SaaS —
 login is a single owner account you create yourself.
@@ -118,6 +121,20 @@ that's usually the business owner's account, connected once; employees
 then just log expenses through the app itself (see step 3) without needing
 their own Drive connection.
 
+**How the Drive folder sync works:** once connected, the app creates a
+"Creative Sprouts Receipts" folder with one subfolder per expense category
+(e.g. `Creative Sprouts Receipts/Travel`, `.../Equipment & Gear`). Anyone
+with access to that Drive folder — including employees you've just shared
+it with in Drive itself, whether or not they have a login to this app — can
+drop a receipt photo straight into the matching subfolder. The app checks
+for new photos every time someone opens the **Expenses** page (there's also
+a **Check Drive now** button for an instant check), matches the subfolder
+name to the category, and creates an expense — flagged **"needs review"**
+until someone opens it in the app and fills in the amount. Renaming a
+category in the app renames its Drive subfolder to match; deleting a
+category leaves the subfolder alone (nothing dropped in it afterward gets
+picked up, since nothing points at it as a category anymore).
+
 ### 5. Apollo.io (optional, for finding leads instead of CSV upload)
 
 By default there's no built-in lead sourcing — you bring a CSV. If you'd
@@ -198,7 +215,7 @@ src/lib/campaign-engine.ts   Core scheduler: picks due sends, sends, reschedules
 src/lib/schedule.ts          Timezone-aware send-window math
 src/lib/template.ts          {{token}} personalization
 src/lib/csv.ts                CSV → lead parsing/column mapping
-src/lib/drive.ts               Google Drive upload/fetch/delete for receipt photos
+src/lib/drive.ts               Google Drive upload/fetch/delete + category-folder sync for receipts
 src/app/api/receipts/*        Auth-gated proxy that serves receipt photos out of Drive
 src/lib/actions/*            Server actions (forms call these directly)
 src/app/(app)/*              Authenticated pages (dashboard, leads, campaigns, ads, expenses, settings)

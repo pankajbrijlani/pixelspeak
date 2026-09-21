@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { google } from "googleapis";
 import { auth } from "@/lib/auth";
 import { createOAuthClient } from "@/lib/google";
-import { findOrCreateReceiptsFolder, DRIVE_CONNECTION_ID } from "@/lib/drive";
+import { findOrCreateReceiptsFolder, backfillCategoryFolders, DRIVE_CONNECTION_ID } from "@/lib/drive";
 import { prisma } from "@/lib/prisma";
 import { encryptSecret } from "@/lib/crypto";
 
@@ -91,6 +91,7 @@ export async function GET(req: NextRequest) {
           connectedById: sessionUserId,
         },
       });
+      await backfillCategoryFolders();
     } else {
       await prisma.emailAccount.upsert({
         where: {

@@ -54,9 +54,14 @@ export default async function ExpenseReportsPage({
   const rows = new Map<string, CategoryRow>();
   const monthTotals = new Array(12).fill(0);
   let yearTotal = 0;
+  let needsReviewCount = 0;
   const currency = expenses[0]?.currency ?? "CAD";
 
   for (const expense of expenses) {
+    if (expense.amount === null) {
+      needsReviewCount += 1;
+      continue; // not counted until someone enters an amount
+    }
     const key = expense.categoryId ?? "uncategorized";
     if (!rows.has(key)) {
       rows.set(key, {
@@ -118,6 +123,16 @@ export default async function ExpenseReportsPage({
         <p className="mt-1 text-2xl font-semibold text-white">
           {formatMoney(yearTotal, currency)}
         </p>
+        {needsReviewCount > 0 && (
+          <p className="mt-2 text-xs text-amber-400">
+            {needsReviewCount} receipt{needsReviewCount === 1 ? "" : "s"} still{" "}
+            {needsReviewCount === 1 ? "needs" : "need"} an amount entered —{" "}
+            <Link href="/expenses?review=1" className="underline hover:text-amber-300">
+              not counted here yet
+            </Link>
+            .
+          </p>
+        )}
       </Card>
 
       {sortedRows.length === 0 ? (

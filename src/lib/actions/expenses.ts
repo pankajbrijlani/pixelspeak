@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
-import { uploadReceipt, deleteReceipt, ReceiptUploadError } from "@/lib/drive";
+import {
+  uploadReceipt,
+  deleteReceipt,
+  moveReceiptToCategoryFolder,
+  syncReceiptsFromDrive,
+  ReceiptUploadError,
+} from "@/lib/drive";
 
 function parseAmount(raw: FormDataEntryValue | null): number {
   const amount = Number(String(raw ?? "").replace(/[^0-9.]/g, ""));
@@ -37,7 +43,7 @@ export async function createExpense(formData: FormData) {
 
   let receipt;
   try {
-    receipt = await uploadReceipt(file);
+    receipt = await uploadReceipt(file, categoryId);
   } catch (err) {
     throw err instanceof ReceiptUploadError ? err : new Error("Upload failed, try again");
   }
@@ -74,21 +80,32 @@ export async function updateExpense(id: string, formData: FormData) {
   let receiptUrl = existing.receiptUrl;
   let receiptPath = existing.receiptPath;
   if (file instanceof File && file.size > 0) {
-    const receipt = await uploadReceipt(file).catch((err) => {
+    const receipt = await uploadReceipt(file, categoryId).catch((err) => {
       throw err instanceof ReceiptUploadError ? err : new Error("Upload failed, try again");
     });
     await deleteReceipt(existing.receiptPath);
     receiptUrl = receipt.url;
     receiptPath = receipt.pathname;
+  } else if (categoryId !== existing.categoryId) {
+    // Photo unchanged but the category did — keep the Drive folder layout
+    // matching what's shown in the app.
+    await moveReceiptToCategoryFolder(receiptPath, categoryId);
   }
 
   await prisma.expense.update({
     where: { id },
-    data: { amount, vendor, note, expenseDate, categoryId, receiptUrl, receiptPath },
+    data: { amount, vendor, note, expenseDate, categoryId, receiptUrl, receiptPath, source: "manual" },
   });
 
   revalidatePath("/expenses");
   redirect("/expenses?updated=1");
+}
+
+export async function checkDriveNow() {
+  const userId = await requireUserId();
+  const result = await syncReceiptsFromDrive(userId);
+  revalidatePath("/expenses");
+  redirect(`/expenses?synced=${result.imported}`);
 }
 
 export async function deleteExpense(id: string) {
