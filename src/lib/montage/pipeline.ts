@@ -16,7 +16,13 @@ export async function runMontagePipeline(projectId: string) {
       data: { status: "ANALYZING", errorMessage: null },
     });
 
-    const assets = await prisma.montageAsset.findMany({ where: { projectId } });
+    // Re-analyzing an asset that already succeeded is pure waste — for large
+    // source footage that's many minutes of redone work on every retry
+    // (e.g. after a render-only failure). Analysis result is a pure
+    // function of the file, which doesn't change once uploaded.
+    const assets = await prisma.montageAsset.findMany({
+      where: { projectId, status: { not: "READY" } },
+    });
     for (const asset of assets) {
       await analyzeAsset(asset.id).catch((err) => {
         console.error(`[montage] analysis failed for asset ${asset.id}`, err);

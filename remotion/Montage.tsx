@@ -111,6 +111,11 @@ export const Montage: React.FC<MontageProps> = ({ segments, fps }) => {
                   trimBefore={Math.round(segment.inSec * fps)}
                   trimAfter={Math.round(segment.outSec * fps)}
                   playbackRate={segment.speed}
+                  // Default is 28s; high-resolution/high-bitrate source
+                  // footage (4K, HEVC) can take longer than that to decode
+                  // an arbitrary frame from, especially without hardware
+                  // video decoding available.
+                  delayRenderTimeoutInMilliseconds={120000}
                   volume={segment.speed > 1.4 ? 0.15 : 0.8}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />

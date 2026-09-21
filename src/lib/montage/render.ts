@@ -97,6 +97,10 @@ export async function renderProject(projectId: string): Promise<string> {
     inputProps: rawInputProps,
     browserExecutable,
     chromiumOptions: { headless: true },
+    // Default is 30s for the whole render to resolve its first frame's
+    // delayRender() calls; high-resolution source footage without hardware
+    // video decoding available can need longer than that per frame.
+    timeoutInMilliseconds: 180000,
   });
 
   await prisma.montageProject.update({ where: { id: projectId }, data: { outputPath: destination } });
