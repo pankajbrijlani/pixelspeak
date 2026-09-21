@@ -26,7 +26,8 @@ one dashboard.
   amount/date/vendor, and file it under a category. Categories can be
   renamed, recolored, or deleted at any time. Every account with a login
   (owner + employees) sees and edits the same shared set of records, so it
-  works as a simple shared expense log for a small team.
+  works as a simple shared expense log for a small team. Receipt photos are
+  stored in a Google Drive folder you connect, not a separate paid service.
 
 It's built for one operator (you) rather than a public multi-tenant SaaS —
 login is a single owner account you create yourself.
@@ -34,9 +35,9 @@ login is a single owner account you create yourself.
 ## Stack
 
 Next.js (App Router) · TypeScript · Tailwind · Postgres + Prisma ·
-NextAuth (credentials login) · Gmail API (googleapis) · Meta Marketing API
-(Graph API) · Apollo.io API (lead search) · Vercel Cron for the send
-scheduler · Vercel Blob for receipt photo storage.
+NextAuth (credentials login) · Gmail API (googleapis) · Google Drive API
+(receipt photo storage) · Meta Marketing API (Graph API) · Apollo.io API
+(lead search) · Vercel Cron for the send scheduler.
 
 ## Setup
 
@@ -58,8 +59,6 @@ Fill in `.env`:
 - `META_APP_ID` / `META_APP_SECRET` — only needed if you later want a full
   OAuth connect flow for Meta; the current build uses a pasted System User
   token instead (see below), so these are optional.
-- `BLOB_READ_WRITE_TOKEN` — only needed for the Expenses feature's receipt
-  photo uploads (see step 9 below). Everything else works without it.
 
 ### 2. Database
 
@@ -79,30 +78,45 @@ To give an employee access (e.g. so they can log Expenses), run the same
 command with their email — every logged-in account sees the same shared
 Expenses data.
 
-### 4. Google Cloud project (for sending cold email via Gmail)
+### 4. Google Cloud project (for Gmail sending and/or Drive receipt storage)
+
+One Google Cloud project + OAuth client covers both the cold-email Gmail
+connection and the Expenses Drive connection — you only need to do this
+once, then connect whichever piece(s) you actually use from **Settings**.
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com),
    create a project.
-2. **APIs & Services → Library** — enable the **Gmail API**.
+2. **APIs & Services → Library** — enable the **Gmail API** (for cold
+   email) and the **Google Drive API** (for Expenses receipt photos).
+   Skip whichever one you don't need.
 3. **APIs & Services → OAuth consent screen** — set it up (External is
-   fine; while it's in "Testing" mode, add your own Gmail address as a
-   test user).
+   fine; while it's in "Testing" mode, add your own Gmail address — and
+   any employee's, if they'll connect their own Drive — as test users).
 4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**
    — type **Web application**. Add an authorized redirect URI:
    - Local dev: `http://localhost:3000/api/connect/google/callback`
    - Production: `https://your-domain.com/api/connect/google/callback`
 5. Copy the client ID/secret into `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
-6. In the app, go to **Settings → Connect Gmail** and approve access. We
-   only request the `gmail.send` scope — the app can send on your behalf
-   but can't read your inbox.
+6. In the app, go to **Settings** and click **Connect Gmail** and/or
+   **Connect Google Drive**, whichever you need, and approve access.
+   - Gmail only requests the `gmail.send` scope — the app can send on your
+     behalf but can't read your inbox.
+   - Drive only requests the `drive.file` scope — the app can only see
+     files it creates itself (the receipts it uploads into a "Creative
+     Sprouts Receipts" folder), not the rest of that Drive account.
 
-**Known limitation:** because we intentionally only request `gmail.send`
-(not inbox read access), the app can't automatically detect when a lead
-replies. Use the **"Mark replied"** button on a campaign's enrollment list
-to stop follow-ups for that lead once they respond. If you'd rather have
-automatic reply detection, that needs the `gmail.readonly` (or
-`gmail.modify`) scope added — a reasonable next step, but a bigger trust
-footprint on your inbox.
+**Known limitation (Gmail):** because we intentionally only request
+`gmail.send` (not inbox read access), the app can't automatically detect
+when a lead replies. Use the **"Mark replied"** button on a campaign's
+enrollment list to stop follow-ups for that lead once they respond. If
+you'd rather have automatic reply detection, that needs the
+`gmail.readonly` (or `gmail.modify`) scope added — a reasonable next step,
+but a bigger trust footprint on your inbox.
+
+Whichever Google account you connect Drive with owns the receipts folder —
+that's usually the business owner's account, connected once; employees
+then just log expenses through the app itself (see step 3) without needing
+their own Drive connection.
 
 ### 5. Apollo.io (optional, for finding leads instead of CSV upload)
 
@@ -143,32 +157,13 @@ overkill for driving your own account).
 Until you add a token, ad campaigns can still be drafted in the UI but the
 **Launch** button stays disabled — nothing reaches Meta.
 
-### 7. Vercel Blob (for the Expenses receipt photos)
-
-Receipt photos are stored in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)
-rather than in Postgres, so the database stays fast and cheap over years of
-receipts. Expense records (amount, category, date, vendor, note) live in
-Postgres alongside the rest of the app's data and are unaffected by this.
-
-1. On Vercel: **Storage → Create → Blob**, attach it to this project, then
-   copy the generated `BLOB_READ_WRITE_TOKEN` into your env vars (Vercel
-   does this automatically when the store is connected).
-2. Running locally: `vercel env pull .env` after connecting the store, or
-   generate a token from the store's **Settings** tab and set
-   `BLOB_READ_WRITE_TOKEN` in `.env` yourself.
-
-Without this token, the rest of the app works normally but adding an
-expense will show an error asking you to set it up. Uploaded receipts are
-stored at an unguessable URL (not indexed or listed publicly) — treat that
-URL as anyone-with-the-link access, same as a shared Drive file.
-
-### 8. Run it
+### 7. Run it
 
 ```bash
 npm run dev
 ```
 
-### 9. Sending on a schedule
+### 8. Sending on a schedule
 
 Cold emails don't send instantly — a scheduler processes due sends. In
 production this is a cron hitting `GET /api/cron/process-queue` with header
@@ -203,7 +198,8 @@ src/lib/campaign-engine.ts   Core scheduler: picks due sends, sends, reschedules
 src/lib/schedule.ts          Timezone-aware send-window math
 src/lib/template.ts          {{token}} personalization
 src/lib/csv.ts                CSV → lead parsing/column mapping
-src/lib/blob.ts               Vercel Blob upload/delete for receipt photos
+src/lib/drive.ts               Google Drive upload/fetch/delete for receipt photos
+src/app/api/receipts/*        Auth-gated proxy that serves receipt photos out of Drive
 src/lib/actions/*            Server actions (forms call these directly)
 src/app/(app)/*              Authenticated pages (dashboard, leads, campaigns, ads, expenses, settings)
 src/app/api/cron/*           Scheduler endpoint

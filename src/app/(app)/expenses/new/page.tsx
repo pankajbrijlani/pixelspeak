@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { Card, PageHeader, Button } from "@/lib/ui";
 import { createExpense } from "@/lib/actions/expenses";
+import { DRIVE_CONNECTION_ID } from "@/lib/drive";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -10,7 +11,10 @@ function today() {
 
 export default async function NewExpensePage() {
   await requireUserId();
-  const categories = await prisma.expenseCategory.findMany({ orderBy: { name: "asc" } });
+  const [categories, driveConnection] = await Promise.all([
+    prisma.expenseCategory.findMany({ orderBy: { name: "asc" } }),
+    prisma.driveConnection.findUnique({ where: { id: DRIVE_CONNECTION_ID } }),
+  ]);
 
   return (
     <div className="mx-auto max-w-lg">
@@ -18,6 +22,19 @@ export default async function NewExpensePage() {
         &larr; Expenses
       </Link>
       <PageHeader title="Add expense" description="Attach a photo of the receipt and fill in the details." />
+
+      {!driveConnection && (
+        <Card className="mb-6 border-amber-900 bg-amber-950/30">
+          <p className="text-sm text-amber-300">
+            Google Drive isn&apos;t connected yet, so there&apos;s nowhere for receipt
+            photos to go.{" "}
+            <Link href="/settings" className="underline hover:text-amber-200">
+              Connect it in Settings
+            </Link>{" "}
+            first.
+          </p>
+        </Card>
+      )}
 
       <Card>
         <form action={createExpense} className="space-y-4">
@@ -105,7 +122,7 @@ export default async function NewExpensePage() {
             />
           </div>
 
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" disabled={!driveConnection}>
             Save expense
           </Button>
         </form>

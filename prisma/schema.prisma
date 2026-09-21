@@ -26,6 +26,7 @@ model User {
   adAccounts    AdAccount[]
   leadProviders LeadProvider[]
   expenses      Expense[]
+  driveConnections DriveConnection[]
 }
 
 model Account {
@@ -321,6 +322,26 @@ model AdCampaign {
 // scoped to a single userId the way leads/campaigns are, so the whole team
 // sees and manages one shared set of records and categories.
 
+// A single shared Google Drive connection (one Google account, connected
+// once from Settings) that receipt photos upload into. Not scoped to a
+// user — whoever is logged in when they add an expense uploads through
+// this one connection, same as the shared Expense/ExpenseCategory data.
+// Always exactly one row, with a fixed id so it's easy to find/upsert.
+model DriveConnection {
+  id             String    @id
+  connectedEmail String
+  folderId       String // Drive folder ("Creative Sprouts Receipts") receipts upload into
+  folderUrl      String?
+  accessToken    String?   @db.Text
+  refreshToken   String    @db.Text
+  tokenExpiresAt DateTime?
+  connectedById  String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  connectedBy User @relation(fields: [connectedById], references: [id])
+}
+
 model ExpenseCategory {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -338,8 +359,8 @@ model Expense {
   vendor        String?
   note          String?   @db.Text
   expenseDate   DateTime  @default(now())
-  receiptUrl    String
-  receiptPath   String // Vercel Blob pathname, used to delete the file on removal
+  receiptUrl    String // app-internal path that proxies the photo from Drive (/api/receipts/:fileId)
+  receiptPath   String // Google Drive file id — used to fetch/delete the photo
   createdById   String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

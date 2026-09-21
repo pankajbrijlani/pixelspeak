@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { encryptSecret } from "@/lib/crypto";
 import { requireUserId } from "@/lib/session";
+import { DRIVE_CONNECTION_ID } from "@/lib/drive";
 
 export async function removeEmailAccount(id: string) {
   const userId = await requireUserId();
@@ -82,4 +83,10 @@ export async function removeLeadProvider(id: string) {
   await prisma.leadProvider.deleteMany({ where: { id, userId } });
   revalidatePath("/settings");
   revalidatePath("/leads/find");
+}
+
+export async function disconnectDrive() {
+  await requireUserId();
+  await prisma.driveConnection.deleteMany({ where: { id: DRIVE_CONNECTION_ID } });
+  revalidatePath("/settings");
 }

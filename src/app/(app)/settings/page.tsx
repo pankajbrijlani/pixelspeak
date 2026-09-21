@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { isGoogleConfigured } from "@/lib/google";
+import { DRIVE_CONNECTION_ID } from "@/lib/drive";
 import { Card, PageHeader, Badge, Button } from "@/lib/ui";
 import {
   removeEmailAccount,
@@ -9,6 +10,7 @@ import {
   removeAdAccount,
   connectLeadProvider,
   removeLeadProvider,
+  disconnectDrive,
 } from "@/lib/actions/settings";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -30,10 +32,11 @@ export default async function SettingsPage({
   const error = typeof params.error === "string" ? params.error : undefined;
   const connected = typeof params.connected === "string" ? params.connected : undefined;
 
-  const [emailAccounts, adAccounts, leadProviders] = await Promise.all([
+  const [emailAccounts, adAccounts, leadProviders, driveConnection] = await Promise.all([
     prisma.emailAccount.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
     prisma.adAccount.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
     prisma.leadProvider.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    prisma.driveConnection.findUnique({ where: { id: DRIVE_CONNECTION_ID } }),
   ]);
   const apollo = leadProviders.find((p) => p.provider === "apollo");
 
@@ -66,7 +69,7 @@ export default async function SettingsPage({
             </p>
           </div>
           {isGoogleConfigured() ? (
-            <a href="/api/connect/google/start">
+            <a href="/api/connect/google/start?purpose=gmail">
               <Button variant="primary">Connect Gmail</Button>
             </a>
           ) : (
@@ -100,6 +103,56 @@ export default async function SettingsPage({
               </li>
             ))}
           </ul>
+        )}
+      </Card>
+
+      <Card className="mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-white">
+              Receipt photo storage (Google Drive)
+            </h2>
+            <p className="mt-1 text-sm text-neutral-400">
+              Expense receipt photos upload into a &ldquo;Creative Sprouts
+              Receipts&rdquo; folder in this connected Drive account. We only
+              request access to files the app itself creates there — not
+              the rest of the Drive.
+            </p>
+          </div>
+          {isGoogleConfigured() ? (
+            !driveConnection && (
+              <a href="/api/connect/google/start?purpose=drive">
+                <Button variant="primary">Connect Google Drive</Button>
+              </a>
+            )
+          ) : (
+            <Badge tone="amber">Not configured</Badge>
+          )}
+        </div>
+
+        {driveConnection && (
+          <div className="mt-5 flex items-center justify-between border-t border-neutral-800 pt-4">
+            <div>
+              <p className="text-sm text-white">{driveConnection.connectedEmail}</p>
+              {driveConnection.folderUrl ? (
+                <a
+                  href={driveConnection.folderUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-violet-400 hover:text-violet-300"
+                >
+                  Open receipts folder in Drive
+                </a>
+              ) : (
+                <p className="text-xs text-neutral-500">Folder connected</p>
+              )}
+            </div>
+            <form action={disconnectDrive}>
+              <Button variant="danger" type="submit">
+                Disconnect
+              </Button>
+            </form>
+          </div>
         )}
       </Card>
 

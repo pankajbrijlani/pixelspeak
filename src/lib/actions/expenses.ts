@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
-import { uploadReceipt, deleteReceipt, ReceiptUploadError } from "@/lib/blob";
+import { uploadReceipt, deleteReceipt, ReceiptUploadError } from "@/lib/drive";
 
 function parseAmount(raw: FormDataEntryValue | null): number {
   const amount = Number(String(raw ?? "").replace(/[^0-9.]/g, ""));
