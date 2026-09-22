@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DJ Vael</title>
+  <meta name="description" content="DJ Vael — Toronto DJ for clubs, private events and brand nights. Mixes, dates and bookings." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800;125,900&family=Manrope:wght@400;500;600;700&family=Nothing+You+Could+Do&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!--
+    CONTENT NOTE: every block marked  data-copy  is placeholder copy.
+    Replace it with the text from vael.music. Photos go in /images — see images/README.md.
+  -->
+
+  <header class="nav">
+    <a class="logo" href="#top" aria-label="DJ Vael home">
+      <span class="logo-script">vael</span><span class="logo-sans">music</span>
+    </a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span>
+    </button>
+    <nav class="nav-links">
+      <a href="#mixes">Mixes</a>
+      <a href="#services">Bookings</a>
+      <a href="#dates">Dates</a>
+      <a href="#about">About</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <!-- HERO: statement headline flanked by tilted photos (LxL "garden shed" layout) -->
+    <section class="hero">
+      <figure class="tilt tilt-left photo" data-reveal>
+        <img src="images/hero-left.jpg" alt="Vael behind the decks" />
+        <figcaption class="ph">images/hero-left.jpg</figcaption>
+      </figure>
+
+      <h1 class="headline" data-copy>
+        From bedroom mixes to packed Toronto floors, Vael is a
+        <span class="script">no-skip</span>
+        DJ built to read the room and hold it all night.
+      </h1>
+
+      <figure class="tilt tilt-right photo" data-reveal>
+        <img src="images/hero-right.jpg" alt="Crowd on the dance floor" />
+        <figcaption class="ph">images/hero-right.jpg</figcaption>
+      </figure>
+    </section>
+
+    <!-- BIG PHOTO + orange swoosh line -->
+    <section class="feature">
+      <svg class="swoosh" viewBox="0 0 1200 900" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M1260 -20 C1150 120 1060 220 940 180 C800 130 720 20 560 20 C380 20 260 200 260 420 C260 640 300 860 300 980"
+              fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" />
+      </svg>
+      <figure class="feature-photo photo" data-reveal>
+        <img src="images/feature.jpg" alt="Vael performing live" />
+        <figcaption class="ph">images/feature.jpg</figcaption>
+      </figure>
+      <div class="feature-copy" data-reveal>
+        <p class="eyebrow">Who is Vael</p>
+        <p class="lede" data-copy>
+          Toronto-based DJ blending house, afro, disco and open-format edits into sets that move
+          from warm-up groove to peak-time energy without losing the thread.
+        </p>
+        <a class="btn" href="#contact">Book a set</a>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="stats" data-reveal>
+      <div><span class="stat-num" data-copy>100+</span><span class="stat-label">Sets played</span></div>
+      <div><span class="stat-num" data-copy>6</span><span class="stat-label">Hour marathons</span></div>
+      <div><span class="stat-num" data-copy>416</span><span class="stat-label">Toronto, ON</span></div>
+      <div><span class="stat-num">∞</span><span class="stat-label">Rewinds requested</span></div>
+    </section>
+
+    <!-- MARQUEE of genres -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>House</span><span class="dot">✺</span>
+        <span>Afro House</span><span class="dot">✺</span>
+        <span>Disco</span><span class="dot">✺</span>
+        <span>Amapiano</span><span class="dot">✺</span>
+        <span>Open Format</span><span class="dot">✺</span>
+        <span>Bollywood Edits</span><span class="dot">✺</span>
+        <span>House</span><span class="dot">✺</span>
+        <span>Afro House</span><span class="dot">✺</span>
+        <span>Disco</span><span class="dot">✺</span>
+        <span>Amapiano</span><span class="dot">✺</span>
+        <span>Open Format</span><span class="dot">✺</span>
+        <span>Bollywood Edits</span><span class="dot">✺</span>
+      </div>
+    </div>
+
+    <!-- MIXES -->
+    <section class="section" id="mixes">
+      <div class="section-head" data-reveal>
+        <h2>Latest <span class="script">mixes</span></h2>
+        <a class="link-arrow" href="https://soundcloud.com/" target="_blank" rel="noopener">All mixes on SoundCloud →</a>
+      </div>
+      <div class="mix-grid">
+        <!-- Replace each .mix-embed with your SoundCloud/Mixcloud iframe embed code -->
+        <article class="mix" data-reveal>
+          <figure class="mix-art photo"><img src="images/mix-1.jpg" alt="" /><figcaption class="ph">images/mix-1.jpg</figcaption></figure>
+          <h3 data-copy>Late Night Warm-Up</h3>
+          <p data-copy>Deep, rolling house for the first two hours.</p>
+          <div class="mix-embed">Paste SoundCloud embed here</div>
+        </article>
+        <article class="mix" data-reveal>
+          <figure class="mix-art photo"><img src="images/mix-2.jpg" alt="" /><figcaption class="ph">images/mix-2.jpg</figcaption></figure>
+          <h3 data-copy>Peak Time Vol. 1</h3>
+          <p data-copy>Afro and tech-leaning cuts when the room is full.</p>
+          <div class="mix-embed">Paste SoundCloud embed here</div>
+        </article>
+        <article class="mix" data-reveal>
+          <figure class="mix-art photo"><img src="images/mix-3.jpg" alt="" /><figcaption class="ph">images/mix-3.jpg</figcaption></figure>
+          <h3 data-copy>Sunday Disco Edits</h3>
+          <p data-copy>Feel-good disco, funk and edits for daytime sets.</p>
+          <div class="mix-embed">Paste SoundCloud embed here</div>
+        </article>
+      </div>
+    </section>
+
+    <!-- SERVICES (LxL-style big list) -->
+    <section class="section services" id="services">
+      <div class="section-head" data-reveal>
+        <h2>Book <span class="script">Vael</span> for</h2>
+      </div>
+      <ol class="service-list">
+        <li data-reveal><span class="num">01</span><span class="svc" data-copy>Club nights</span><span class="svc-desc" data-copy>Warm-up, headline or closing sets.</span></li>
+        <li data-reveal><span class="num">02</span><span class="svc" data-copy>Private events</span><span class="svc-desc" data-copy>Birthdays, weddings and house parties.</span></li>
+        <li data-reveal><span class="num">03</span><span class="svc" data-copy>Brand &amp; launches</span><span class="svc-desc" data-copy>Store openings, activations, after-parties.</span></li>
+        <li data-reveal><span class="num">04</span><span class="svc" data-copy>Audio + visuals</span><span class="svc-desc" data-copy>DJ sets paired with custom-made visuals.</span></li>
+      </ol>
+    </section>
+
+    <!-- DATES -->
+    <section class="section" id="dates">
+      <div class="section-head" data-reveal>
+        <h2>Upcoming <span class="script">dates</span></h2>
+      </div>
+      <ul class="dates">
+        <li data-reveal><span class="date" data-copy>OCT 04</span><span class="venue" data-copy>Venue name</span><span class="city">Toronto, ON</span><a class="btn btn-sm" href="#">Tickets</a></li>
+        <li data-reveal><span class="date" data-copy>OCT 18</span><span class="venue" data-copy>Venue name</span><span class="city">Toronto, ON</span><a class="btn btn-sm" href="#">Tickets</a></li>
+        <li data-reveal><span class="date" data-copy>NOV 01</span><span class="venue" data-copy>Private event</span><span class="city">Toronto, ON</span><span class="tag">Sold out</span></li>
+      </ul>
+    </section>
+
+    <!-- ABOUT: photo + bio with tilted second image -->
+    <section class="section about" id="about">
+      <figure class="tilt tilt-left about-photo photo" data-reveal>
+        <img src="images/about.jpg" alt="Portrait of Vael" />
+        <figcaption class="ph">images/about.jpg</figcaption>
+      </figure>
+      <div class="about-copy" data-reveal>
+        <h2>The <span class="script">story</span></h2>
+        <p data-copy>
+          Vael comes to DJing after twenty years in visual effects and photography, bringing the
+          same eye for timing, colour and pacing to the decks. Every set is built like an edit:
+          tension, release, and a finish people remember.
+        </p>
+        <p data-copy>
+          Based in Toronto and playing across the GTA, Vael is available for clubs, private
+          events and brand nights.
+        </p>
+      </div>
+    </section>
+
+    <!-- CONTACT CTA -->
+    <section class="cta" id="contact">
+      <svg class="swoosh swoosh-cta" viewBox="0 0 1200 400" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M-40 320 C200 380 360 120 600 140 C840 160 900 360 1240 60" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" />
+      </svg>
+      <p class="eyebrow" data-reveal>Bookings</p>
+      <h2 class="cta-title" data-reveal>Let's make the<br /><span class="script">floor</span> move.</h2>
+      <a class="cta-mail" href="mailto:bookings@vael.music" data-copy data-reveal>bookings@vael.music</a>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a class="logo" href="#top"><span class="logo-script">vael</span><span class="logo-sans">music</span></a>
+    <nav class="socials">
+      <a href="https://instagram.com/" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://soundcloud.com/" target="_blank" rel="noopener">SoundCloud</a>
+      <a href="https://www.mixcloud.com/" target="_blank" rel="noopener">Mixcloud</a>
+      <a href="https://www.tiktok.com/" target="_blank" rel="noopener">TikTok</a>
+    </nav>
+    <p class="fine">© <span id="year">2026</span> Vael. Toronto, Canada.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
