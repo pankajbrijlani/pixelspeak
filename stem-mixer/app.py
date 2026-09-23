@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import traceback
 from pathlib import Path
 
 import gradio as gr
@@ -88,7 +89,11 @@ def on_build(files, *args, progress=gr.Progress()):
     if len(paths) < 2:
         raise gr.Error("Upload at least two songs.")
     s = _settings(*args)
-    r = build(paths, s, lambda f, m: progress(f, desc=m))
+    try:
+        r = build(paths, s, lambda f, m: progress(f, desc=m))
+    except Exception as e:
+        traceback.print_exc()  # full details in the terminal
+        raise gr.Error(f"{type(e).__name__}: {e}", duration=None) from e
     downloads = [str(r.zip_path), str(r.mix_wav)] + ([str(r.melody_mid)] if r.melody_mid else [])
     layers = [str(p) for p in r.layer_wavs.values()]
     return (

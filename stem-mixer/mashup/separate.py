@@ -57,8 +57,17 @@ def separate_demucs(stereo: np.ndarray) -> dict[str, np.ndarray]:
         raise RuntimeError(f"expected a {SR} Hz Demucs model")
     ref = wav.mean(0)
     mean, std = ref.mean(), ref.std() + 1e-8
+    x = ((wav - mean) / std)[None]
+    device = _device()
     with torch.no_grad():
-        out = apply_model(model, ((wav - mean) / std)[None], device=_device(), split=True, overlap=0.25, progress=False)[0]
+        try:
+            out = apply_model(model, x, device=device, split=True, overlap=0.25, progress=False)[0]
+        except (RuntimeError, NotImplementedError):
+            if device == "cpu":
+                raise
+            # Apple's MPS (and some GPUs) lack a few operations Demucs uses: fall back to CPU
+            print(f"  Demucs failed on {device}, retrying on CPU (slower)…", flush=True)
+            out = apply_model(model, x, device="cpu", split=True, overlap=0.25, progress=False)[0]
     out = out * std + mean
     return {name: out[i].cpu().numpy().astype(np.float32) for i, name in enumerate(model.sources)}
 
