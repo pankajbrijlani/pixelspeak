@@ -9,21 +9,33 @@ It's standalone and separate from the PixelSpeak web app in this repo.
 
 ## Setup (once)
 
-You need Python 3.10–3.11, plus two command-line programs:
+You need **Python 3.11** (3.12 breaks some of the audio packages) plus two
+command-line programs, Rubber Band and ffmpeg.
+
+**Mac:**
 
 ```bash
-# macOS
-brew install rubberband ffmpeg
-# Ubuntu / WSL
-sudo apt install rubberband-cli ffmpeg
-# Windows (without WSL): get ffmpeg from ffmpeg.org and Rubber Band from breakfastquay.com,
-# and put both on your PATH. Without Rubber Band the app still works using librosa's stretcher.
-
+brew install python@3.11 rubberband ffmpeg
 cd stem-mixer
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+**Ubuntu / WSL:**
+
+```bash
+sudo apt install python3.11 python3.11-venv rubberband-cli ffmpeg
+cd stem-mixer
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+**Windows (without WSL):** install Python 3.11, then get ffmpeg from ffmpeg.org
+and Rubber Band from breakfastquay.com and put both on your PATH. Without Rubber
+Band the app still works, using librosa's time-stretcher instead.
 
 The first Demucs run downloads its model (about 80 MB).
 
