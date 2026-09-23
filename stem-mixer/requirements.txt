@@ -1,0 +1,19 @@
+# Core audio + analysis
+numpy
+scipy
+librosa>=0.10
+soundfile
+# Stage 4: source separation (installs PyTorch)
+torch
+torchaudio
+demucs>=4.0
+# Stage 5: melody extraction (also brings pretty_midi)
+basic-pitch
+pretty_midi
+# Stage 7: time-stretch / pitch-shift (also needs the `rubberband` program) + mp3 export (needs ffmpeg)
+pyrubberband
+pydub
+# UI
+gradio>=6.0
+# tests
+pytest
