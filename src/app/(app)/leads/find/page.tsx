@@ -2,21 +2,23 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { Card, PageHeader } from "@/lib/ui";
-import FindLeadsForm from "./find-leads-form";
+import FindLeadsTabs from "./find-leads-tabs";
 
 export default async function FindLeadsPage() {
   const userId = await requireUserId();
 
-  const [provider, leadLists] = await Promise.all([
-    prisma.leadProvider.findFirst({
-      where: { userId, provider: "apollo", isActive: true },
-    }),
+  const [providers, leadLists] = await Promise.all([
+    prisma.leadProvider.findMany({ where: { userId, isActive: true } }),
     prisma.leadList.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
       select: { id: true, name: true },
     }),
   ]);
+
+  const apolloConnected = providers.some((p) => p.provider === "apollo");
+  const googlePlacesConnected = providers.some((p) => p.provider === "google_places");
+  const hunterConnected = providers.some((p) => p.provider === "hunter");
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -25,17 +27,17 @@ export default async function FindLeadsPage() {
       </Link>
       <PageHeader
         title="Find leads"
-        description="Search Apollo.io by job title, location, and keyword, then pull the ones you want into a list."
+        description="Search for people by job title (Apollo) or businesses by category (Google Places + Hunter.io), then pull the ones you want into a list."
       />
 
-      {!provider ? (
+      {!apolloConnected && !googlePlacesConnected ? (
         <Card className="border-amber-900 bg-amber-950/30">
           <p className="text-sm text-amber-300">
-            No Apollo account connected yet.{" "}
+            No lead-search provider connected yet.{" "}
             <Link href="/settings" className="underline">
-              Connect your Apollo API key in Settings
+              Connect Apollo, or Google Places + Hunter.io, in Settings
             </Link>{" "}
-            to search for leads here. In the meantime you can still{" "}
+            to search here. In the meantime you can still{" "}
             <Link href="/leads" className="underline">
               upload a CSV
             </Link>
@@ -43,7 +45,12 @@ export default async function FindLeadsPage() {
           </p>
         </Card>
       ) : (
-        <FindLeadsForm leadLists={leadLists} />
+        <FindLeadsTabs
+          leadLists={leadLists}
+          apolloConnected={apolloConnected}
+          googlePlacesConnected={googlePlacesConnected}
+          hunterConnected={hunterConnected}
+        />
       )}
     </div>
   );

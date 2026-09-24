@@ -12,6 +12,8 @@ import {
   type ApolloProspect,
   type ApolloSearchParams,
 } from "@/lib/apollo";
+import { searchPlaces, GooglePlacesApiError, type PlaceResult } from "@/lib/google-places";
+import { domainSearch, pickBestEmail, extractDomain, HunterApiError } from "@/lib/hunter";
 
 export async function uploadLeadsCsv(formData: FormData) {
   const userId = await requireUserId();
@@ -173,6 +175,121 @@ export async function importProspects(input: {
       });
       imported += 1;
     } catch {
+      skipped += 1;
+    }
+  }
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${listId}`);
+  return { ok: true, imported, skipped, listId };
+}
+
+export type BusinessSearchResult =
+  | { ok: true; businesses: PlaceResult[] }
+  | { ok: false; error: string };
+
+export async function searchBusinesses(params: {
+  category: string;
+  location: string;
+}): Promise<BusinessSearchResult> {
+  const userId = await requireUserId();
+  const provider = await prisma.leadProvider.findFirst({
+    where: { userId, provider: "google_places", isActive: true },
+  });
+  if (!provider) {
+    return { ok: false, error: "Connect Google Places in Settings first." };
+  }
+  if (!params.category.trim()) {
+    return { ok: false, error: "Enter what kind of business you're looking for." };
+  }
+
+  try {
+    const businesses = await searchPlaces(provider, params);
+    return { ok: true, businesses };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof GooglePlacesApiError ? err.message : "Google Places search failed.",
+    };
+  }
+}
+
+export type ImportBusinessInput = PlaceResult;
+
+export type ImportBusinessesResult =
+  | { ok: true; imported: number; skipped: number; listId: string }
+  | { ok: false; error: string };
+
+export async function importBusinesses(input: {
+  listName: string;
+  existingListId?: string;
+  businesses: ImportBusinessInput[];
+}): Promise<ImportBusinessesResult> {
+  const userId = await requireUserId();
+  const hunterProvider = await prisma.leadProvider.findFirst({
+    where: { userId, provider: "hunter", isActive: true },
+  });
+  if (!hunterProvider) {
+    return { ok: false, error: "Connect Hunter.io in Settings first." };
+  }
+  if (input.businesses.length === 0) {
+    return { ok: false, error: "Select at least one business to import." };
+  }
+
+  let listId = input.existingListId;
+  if (listId) {
+    const owned = await prisma.leadList.findFirst({ where: { id: listId, userId } });
+    if (!owned) return { ok: false, error: "List not found." };
+  } else {
+    const list = await prisma.leadList.create({
+      data: {
+        userId,
+        name: input.listName || `Business search ${new Date().toLocaleDateString()}`,
+        source: "google_places",
+      },
+    });
+    listId = list.id;
+  }
+
+  let imported = 0;
+  let skipped = 0;
+
+  for (const business of input.businesses) {
+    const domain = business.website ? extractDomain(business.website) : null;
+    if (!domain) {
+      skipped += 1;
+      continue;
+    }
+
+    try {
+      const emails = await domainSearch(hunterProvider, domain);
+      const best = pickBestEmail(emails);
+      if (!best) {
+        skipped += 1;
+        continue;
+      }
+
+      await prisma.lead.upsert({
+        where: { leadListId_email: { leadListId: listId, email: best.value.toLowerCase() } },
+        update: {},
+        create: {
+          leadListId: listId,
+          email: best.value.toLowerCase(),
+          firstName: best.firstName,
+          lastName: best.lastName,
+          company: business.name,
+          title: best.position,
+          website: domain,
+          phone: business.phone,
+        },
+      });
+      imported += 1;
+    } catch (err) {
+      if (err instanceof HunterApiError && err.status === 429) {
+        // Out of Hunter search credits for this cycle — stop rather than
+        // fail through the rest of the batch one by one.
+        break;
+      }
       skipped += 1;
     }
   }

@@ -36,6 +36,8 @@ export default async function SettingsPage({
     prisma.leadProvider.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
   ]);
   const apollo = leadProviders.find((p) => p.provider === "apollo");
+  const googlePlaces = leadProviders.find((p) => p.provider === "google_places");
+  const hunter = leadProviders.find((p) => p.provider === "hunter");
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -122,6 +124,7 @@ export default async function SettingsPage({
         </div>
 
         <form action={connectLeadProvider} className="mt-4 flex flex-wrap items-end gap-3">
+          <input type="hidden" name="provider" value="apollo" />
           <div className="flex-1 min-w-[220px]">
             <label className="block text-xs font-medium text-neutral-400">
               Apollo API key
@@ -142,6 +145,88 @@ export default async function SettingsPage({
             </Button>
           </form>
         )}
+      </Card>
+
+      <Card className="mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-white">
+              Business search (Google Places + Hunter.io)
+            </h2>
+            <p className="mt-1 text-sm text-neutral-400">
+              An alternative to Apollo: find real businesses by category and location
+              through Google&apos;s own Places API (not scraping), then look up email
+              addresses at each business&apos;s website with Hunter.io. Both have free
+              tiers to start. Needs both keys connected to search and import.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-medium text-neutral-400">
+                Google Places API key
+              </label>
+              {googlePlaces && <Badge tone="green">Connected</Badge>}
+            </div>
+            <form action={connectLeadProvider} className="mt-1 flex items-end gap-2">
+              <input type="hidden" name="provider" value="google_places" />
+              <input
+                name="apiKey"
+                type="password"
+                placeholder={googlePlaces ? "•••••••••••••••• (saved)" : "AIza..."}
+                className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-violet-500"
+              />
+              <Button variant="secondary" type="submit">
+                {googlePlaces ? "Update" : "Connect"}
+              </Button>
+            </form>
+            {googlePlaces && (
+              <form action={removeLeadProvider.bind(null, googlePlaces.id)} className="mt-2">
+                <button type="submit" className="text-xs text-neutral-500 hover:text-red-400">
+                  Remove
+                </button>
+              </form>
+            )}
+            <p className="mt-1 text-xs text-neutral-500">
+              console.cloud.google.com &rarr; enable &ldquo;Places API (New)&rdquo; &rarr;
+              Credentials &rarr; API key.
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-medium text-neutral-400">
+                Hunter.io API key
+              </label>
+              {hunter && <Badge tone="green">Connected</Badge>}
+            </div>
+            <form action={connectLeadProvider} className="mt-1 flex items-end gap-2">
+              <input type="hidden" name="provider" value="hunter" />
+              <input
+                name="apiKey"
+                type="password"
+                placeholder={hunter ? "•••••••••••••••• (saved)" : "your Hunter API key"}
+                className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-violet-500"
+              />
+              <Button variant="secondary" type="submit">
+                {hunter ? "Update" : "Connect"}
+              </Button>
+            </form>
+            {hunter && (
+              <form action={removeLeadProvider.bind(null, hunter.id)} className="mt-2">
+                <button type="submit" className="text-xs text-neutral-500 hover:text-red-400">
+                  Remove
+                </button>
+              </form>
+            )}
+            <p className="mt-1 text-xs text-neutral-500">
+              hunter.io &rarr; Settings &rarr; API &mdash; free tier includes 25
+              searches/month.
+            </p>
+          </div>
+        </div>
       </Card>
 
       <Card>

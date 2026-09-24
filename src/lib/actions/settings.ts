@@ -59,18 +59,24 @@ export async function removeAdAccount(id: string) {
   revalidatePath("/ads");
 }
 
+const VALID_LEAD_PROVIDERS = ["apollo", "google_places", "hunter"] as const;
+
 export async function connectLeadProvider(formData: FormData) {
   const userId = await requireUserId();
+  const provider = String(formData.get("provider") ?? "");
   const apiKey = String(formData.get("apiKey") ?? "").trim();
 
+  if (!VALID_LEAD_PROVIDERS.includes(provider as (typeof VALID_LEAD_PROVIDERS)[number])) {
+    throw new Error("Unknown lead provider");
+  }
   if (!apiKey) {
     throw new Error("API key is required");
   }
 
   await prisma.leadProvider.upsert({
-    where: { userId_provider: { userId, provider: "apollo" } },
+    where: { userId_provider: { userId, provider } },
     update: { apiKey: encryptSecret(apiKey), isActive: true },
-    create: { userId, provider: "apollo", apiKey: encryptSecret(apiKey) },
+    create: { userId, provider, apiKey: encryptSecret(apiKey) },
   });
 
   revalidatePath("/settings");
