@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CheckCircleIcon,
+  CopyIcon,
   DownloadIcon,
   DriveIcon,
   ErrorCircleIcon,
   FilmIcon,
+  FolderIcon,
   ImageIcon,
   SpinnerIcon,
   UploadCloudIcon,
@@ -38,11 +40,13 @@ export function MontageWorkspace({
   initialAssets,
   initialStatus,
   initialHasOutput,
+  localFolderPath,
 }: {
   projectId: string;
   initialAssets: AssetSummary[];
   initialStatus: ProjectStatus;
   initialHasOutput: boolean;
+  localFolderPath: string;
 }) {
   const [assets, setAssets] = useState<AssetSummary[]>(initialAssets);
   const [status, setStatus] = useState<ProjectStatus>(initialStatus);
@@ -378,8 +382,10 @@ export function MontageWorkspace({
                 <DownloadIcon />
                 Export for Premiere (XML)
               </a>
+              <FolderPathRow path={localFolderPath} />
               <p className="max-w-xs text-xs text-neutral-500">
-                References the original clips on this machine — import into Premiere to fine-tune the cut with full-quality footage.
+                That folder already has the source clips, the rendered MP4, and the Premiere XML sitting together — the XML button above is just a
+                browser-download copy of the same file.
               </p>
             </div>
           </div>
@@ -414,6 +420,36 @@ function Step({
       </div>
       {children}
     </section>
+  );
+}
+
+function FolderPathRow({ path }: { path: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(path);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard API can be unavailable (e.g. insecure context) — silently
+      // no-op, the path is still visible to select and copy manually.
+    }
+  }
+
+  return (
+    <div className="mt-1 flex max-w-xs items-center gap-1.5 rounded-lg border border-neutral-800 bg-neutral-950 px-2.5 py-1.5">
+      <FolderIcon className="h-3.5 w-3.5 shrink-0 text-neutral-500" />
+      <code className="min-w-0 flex-1 truncate text-[11px] text-neutral-400">{path}</code>
+      <button
+        type="button"
+        onClick={copy}
+        title="Copy path — paste into Finder's Go to Folder (Cmd+Shift+G)"
+        className="shrink-0 text-neutral-500 transition hover:text-neutral-200"
+      >
+        {copied ? <CheckCircleIcon className="h-3.5 w-3.5 text-emerald-400" /> : <CopyIcon className="h-3.5 w-3.5" />}
+      </button>
+    </div>
   );
 }
 

@@ -1,4 +1,7 @@
+import { writeFile } from "node:fs/promises";
+import { prisma } from "@/lib/prisma";
 import { MONTAGE_FPS } from "./render";
+import { xmlPath } from "./storage";
 
 // Must match the Composition dimensions in remotion/Root.tsx.
 const WIDTH = 1080;
@@ -139,4 +142,34 @@ export function buildPremiereXml(projectName: string, segments: XmlSegment[]): s
     </media>
   </sequence>
 </xmeml>`;
+}
+
+/**
+ * Builds the XML for a project and writes it into that project's local
+ * folder, right alongside originals/ and output.mp4 — so opening the one
+ * folder in Finder shows the source clips, the rendered preview, and the
+ * Premiere sequence together, no separate browser download needed.
+ */
+export async function savePremiereXml(projectId: string): Promise<string> {
+  const project = await prisma.montageProject.findUniqueOrThrow({ where: { id: projectId } });
+  const segments = await prisma.montageSegment.findMany({
+    where: { projectId },
+    orderBy: { order: "asc" },
+    include: { asset: true },
+  });
+
+  const xml = buildPremiereXml(
+    project.name,
+    segments.map((s) => ({
+      type: s.type,
+      inSec: s.inSec,
+      outSec: s.outSec,
+      speed: s.speed,
+      asset: { originalName: s.asset.originalName, storagePath: s.asset.storagePath },
+    })),
+  );
+
+  const destination = xmlPath(projectId);
+  await writeFile(destination, xml);
+  return destination;
 }

@@ -30,6 +30,10 @@ export function outputPath(projectId: string) {
   return path.join(projectDir(projectId), "output.mp4");
 }
 
+export function xmlPath(projectId: string) {
+  return path.join(projectDir(projectId), "premiere-edit.xml");
+}
+
 export async function ensureProjectDirs(projectId: string) {
   await mkdir(originalsDir(projectId), { recursive: true });
   await mkdir(thumbnailsDir(projectId), { recursive: true });

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { deleteMontageProject } from "@/lib/actions/montage";
+import { projectDir } from "@/lib/montage/storage";
 import { MontageWorkspace } from "./workspace";
 import { TrashIcon } from "../icons";
 
@@ -47,6 +48,7 @@ export default async function MontageProjectPage({ params }: { params: Promise<{
         }))}
         initialStatus={project.status}
         initialHasOutput={Boolean(project.outputPath)}
+        localFolderPath={projectDir(project.id)}
       />
     </div>
   );

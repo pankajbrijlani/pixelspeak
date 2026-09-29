@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readFile } from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
-import { buildPremiereXml } from "@/lib/montage/premiere-xml";
+import { savePremiereXml } from "@/lib/montage/premiere-xml";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: projectId } = await params;
@@ -12,26 +13,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const segments = await prisma.montageSegment.findMany({
-    where: { projectId },
-    orderBy: { order: "asc" },
-    include: { asset: true },
-  });
-
-  if (segments.length === 0) {
+  const segmentCount = await prisma.montageSegment.count({ where: { projectId } });
+  if (segmentCount === 0) {
     return NextResponse.json({ error: "No segments to export — generate the montage first" }, { status: 400 });
   }
 
-  const xml = buildPremiereXml(
-    project.name,
-    segments.map((s) => ({
-      type: s.type,
-      inSec: s.inSec,
-      outSec: s.outSec,
-      speed: s.speed,
-      asset: { originalName: s.asset.originalName, storagePath: s.asset.storagePath },
-    })),
-  );
+  // Regenerates on every request (cheap — it's just an XML string) so a
+  // browser download always reflects the current segments, on top of the
+  // copy the pipeline already saved into the project's local folder.
+  const path = await savePremiereXml(projectId);
+  const xml = await readFile(path, "utf-8");
 
   const filename = `${project.name.replace(/[^a-z0-9 _-]/gi, "").trim() || "montage"}.xml`;
 

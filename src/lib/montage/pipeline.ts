@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { analyzeAsset } from "./analyze";
 import { buildEdl } from "./edl";
+import { savePremiereXml } from "./premiere-xml";
 import { renderProject } from "./render";
 
 /**
@@ -38,6 +39,10 @@ export async function runMontagePipeline(projectId: string) {
 
     await prisma.montageProject.update({ where: { id: projectId }, data: { status: "RENDERING" } });
     await renderProject(projectId);
+
+    // Best-effort: the render itself already succeeded, so a broken XML
+    // write shouldn't flip a finished project to FAILED.
+    await savePremiereXml(projectId).catch((err) => console.error(`[montage] xml save failed for project ${projectId}`, err));
 
     await prisma.montageProject.update({ where: { id: projectId }, data: { status: "DONE" } });
   } catch (err) {
