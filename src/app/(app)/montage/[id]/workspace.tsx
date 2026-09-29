@@ -370,6 +370,17 @@ export function MontageWorkspace({
                 <DownloadIcon />
                 Download MP4
               </a>
+              <a
+                href={`/api/montage/projects/${projectId}/export-xml`}
+                download
+                className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 transition hover:bg-neutral-800"
+              >
+                <DownloadIcon />
+                Export for Premiere (XML)
+              </a>
+              <p className="max-w-xs text-xs text-neutral-500">
+                References the original clips on this machine — import into Premiere to fine-tune the cut with full-quality footage.
+              </p>
             </div>
           </div>
         </Step>
