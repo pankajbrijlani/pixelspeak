@@ -11,7 +11,7 @@ Built from the vael-site design: dark brown, cream, orange, Archivo Expanded hea
 | `vael-bookings-story.mp4` | 1080×1920 | "Bookings open" story/Reel with scrolling genre bands |
 | `vael-bookings-post.mp4` | 1080×1350 | Same, as a 4:5 feed post |
 
-The logo animation is timed to 124 BPM, so it sits on a house track if you add audio in Instagram.
+The logo animation is timed to 126 BPM, so it sits on a tech house track if you add audio in Instagram.
 
 ## Static posts (PNG)
 
