@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Standalone static site for DJ Vael
     "vael-site/**",
+    "vael-instagram/**",
   ]),
 ]);
 

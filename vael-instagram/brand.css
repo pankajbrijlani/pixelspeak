@@ -1,0 +1,47 @@
+/* Vael brand tokens — same palette and type as vael-site/. Fonts are SIL OFL, bundled locally. */
+@font-face {
+  font-family: "Archivo";
+  src: url(fonts/archivo-latin-standard-normal.woff2) format("woff2-variations");
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url(fonts/manrope-latin-wght-normal.woff2) format("woff2-variations");
+  font-weight: 200 800;
+}
+@font-face {
+  font-family: "Nothing You Could Do";
+  src: url(fonts/nothing-you-could-do-latin-400-normal.woff2) format("woff2");
+}
+
+:root {
+  --bg: #262120;
+  --bg-2: #2f2927;
+  --cream: #fdf0c2;
+  --cream-dim: #d9cca3;
+  --orange: #ff4d1f;
+  --display: "Archivo", "Arial Black", sans-serif;
+  --body: "Manrope", system-ui, sans-serif;
+  --script: "Nothing You Could Do", cursive;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--cream); font-family: var(--body); }
+
+.display {
+  font-family: var(--display);
+  font-stretch: 125%;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+}
+.script {
+  font-family: var(--script);
+  color: var(--orange);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  display: inline-block;
+}

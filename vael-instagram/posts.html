@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vael Instagram posts</title>
+<!--
+  Static Instagram posts. Each .post exports to export/<data-name>.png via render.mjs.
+  Feed posts are 1080x1350 (4:5), the profile picture 1080x1080, highlight covers 1080x1920.
+  Edit the text right here; anything marked data-copy is placeholder.
+-->
+<link rel="stylesheet" href="brand.css" />
+<style>
+  body { display: flex; flex-direction: column; align-items: center; gap: 60px; padding: 60px 0; background: #111; }
+  .post { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: var(--bg); }
+  .post.square { height: 1080px; }
+  .post.tall { height: 1920px; }
+
+  .swoosh { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .swoosh path { fill: none; stroke: var(--orange); stroke-width: 30; stroke-linecap: round; }
+
+  .mini-logo { position: absolute; top: 64px; left: 72px; display: flex; align-items: baseline; z-index: 2; }
+  .mini-logo .script { font-size: 62px; margin-right: 3px; transform: rotate(-6deg); }
+  .mini-logo .sans { font-family: var(--body); font-weight: 600; font-size: 46px; letter-spacing: -0.02em; }
+  .corner { position: absolute; top: 80px; right: 72px; font-weight: 700; font-size: 24px; letter-spacing: 0.22em;
+            text-transform: uppercase; color: var(--cream-dim); z-index: 2; }
+  .foot { position: absolute; bottom: 70px; left: 72px; right: 72px; display: flex; justify-content: space-between;
+          font-weight: 700; font-size: 24px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--cream-dim); z-index: 2; }
+  .foot b { color: var(--orange); }
+
+  /* 1 — statement */
+  .statement h1 { position: absolute; left: 60px; right: 60px; top: 300px; text-align: center; font-size: 118px; z-index: 1; }
+  .statement h1 .script { font-size: 1.15em; transform: rotate(-7deg); }
+
+  /* 2 — services */
+  .services h2 { position: absolute; left: 72px; top: 210px; font-size: 120px; }
+  .services h2 .script { transform: rotate(-6deg) translateY(-0.05em); font-size: 1.1em; }
+  .services ol { position: absolute; left: 72px; right: 72px; top: 520px; list-style: none; border-top: 2px solid rgba(253,240,194,.18); }
+  .services li { display: grid; grid-template-columns: 90px 1fr; align-items: baseline; padding: 34px 0; border-bottom: 2px solid rgba(253,240,194,.18); }
+  .services .num { color: var(--orange); font-weight: 800; font-size: 28px; }
+  .services .svc { font-size: 66px; }
+
+  /* 3 — genres */
+  .genres .stack { position: absolute; left: 0; right: 0; top: 200px; text-align: center; }
+  .genres .stack div { font-size: 114px; line-height: 1.02; }
+  .genres .stack div:nth-child(even) { color: transparent; -webkit-text-stroke: 3px var(--cream); }
+  .genres .band { position: absolute; left: -10%; width: 120%; top: 830px; transform: rotate(-6deg);
+                  background: var(--orange); color: var(--bg); text-align: center; padding: 22px 0; font-size: 58px; white-space: nowrap; z-index: 1; }
+  .genres .label { position: absolute; left: 0; right: 0; bottom: 140px; text-align: center; }
+  .genres .label .script { font-size: 110px; transform: rotate(-5deg); }
+
+  /* 4 — dates */
+  .dates h2 { position: absolute; left: 72px; top: 210px; font-size: 120px; }
+  .dates h2 .script { transform: rotate(-6deg); font-size: 1.1em; }
+  .dates ul { position: absolute; left: 72px; right: 72px; top: 560px; list-style: none; }
+  .dates li { display: grid; grid-template-columns: 250px 1fr; align-items: center; padding: 40px 0; border-bottom: 2px solid rgba(253,240,194,.18); }
+  .dates .date { font-size: 60px; color: var(--orange); }
+  .dates .venue { font-weight: 800; font-size: 44px; line-height: 1.15; }
+  .dates .venue small { display: block; font-weight: 500; font-size: 28px; color: var(--cream-dim); }
+
+  /* 5 — new mix */
+  .mix .frame { position: absolute; top: 230px; left: 170px; width: 740px; height: 740px; border-radius: 22px; overflow: hidden;
+                transform: rotate(-5deg); box-shadow: 0 30px 70px rgba(0,0,0,.55);
+                background: radial-gradient(circle at 30% 30%, rgba(255,77,31,.45), transparent 60%), linear-gradient(135deg, #4a3b35, #1d1817); }
+  .mix .frame img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mix .frame .ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--cream-dim); font-size: 26px; letter-spacing: .05em; }
+  .mix .badge { position: absolute; top: 190px; right: 110px; width: 230px; height: 230px; border-radius: 50%; background: var(--orange);
+                color: var(--bg); display: grid; place-items: center; text-align: center; transform: rotate(12deg); z-index: 2;
+                font-size: 44px; line-height: .95; }
+  .mix h2 { position: absolute; left: 72px; right: 72px; bottom: 170px; font-size: 100px; text-align: center; }
+  .mix h2 .script { font-size: 1.1em; transform: rotate(-6deg); }
+
+  /* profile picture + highlight covers */
+  .profile, .cover { display: grid; place-items: center; }
+  .profile .script { font-size: 330px; line-height: 1; transform: rotate(-8deg) translate(-6px, -40px); position: relative; z-index: 1; }
+  .profile svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .profile path { fill: none; stroke: var(--orange); stroke-width: 26; stroke-linecap: round; }
+  .cover .script { font-size: 230px; transform: rotate(-7deg); }
+</style>
+</head>
+<body>
+
+<!-- 1. Statement -->
+<section class="post statement" data-name="post-1-statement">
+  <svg class="swoosh" viewBox="0 0 1080 1350" aria-hidden="true">
+    <path d="M -40 1120 C 200 1230 420 1110 560 1030 C 720 940 880 1070 1120 880" />
+  </svg>
+  <div class="mini-logo"><span class="script">vael</span><span class="sans">music</span></div>
+  <span class="corner">DJ · Toronto</span>
+  <h1 class="display" data-copy>Read the room.<br />Hold it<br /><span class="script">all night</span><br />long.</h1>
+  <div class="foot"><span>House · Afro · Disco</span><span><b>✺</b> vael.music</span></div>
+</section>
+
+<!-- 2. Services -->
+<section class="post services" data-name="post-2-book-vael">
+  <div class="mini-logo"><span class="script">vael</span><span class="sans">music</span></div>
+  <span class="corner">Bookings open</span>
+  <h2 class="display">Book <span class="script">Vael</span><br />for</h2>
+  <ol>
+    <li><span class="num">01</span><span class="svc display">Club nights</span></li>
+    <li><span class="num">02</span><span class="svc display">Private events</span></li>
+    <li><span class="num">03</span><span class="svc display">Brand launches</span></li>
+    <li><span class="num">04</span><span class="svc display">Audio + visuals</span></li>
+  </ol>
+  <div class="foot"><span>DM or link in bio</span><span><b>✺</b> vael.music</span></div>
+</section>
+
+<!-- 3. Genres -->
+<section class="post genres" data-name="post-3-genres">
+  <div class="mini-logo"><span class="script">vael</span><span class="sans">music</span></div>
+  <span class="corner">The sound</span>
+  <div class="stack display" data-copy>
+    <div>House</div><div>Afro</div><div>Disco</div><div>Amapiano</div><div>Edits</div>
+  </div>
+  <div class="band display">Open format ✺ all night ✺ open format</div>
+  <div class="label"><span class="script">what I play</span></div>
+  <div class="foot"><span>Toronto, ON</span><span><b>✺</b> vael.music</span></div>
+</section>
+
+<!-- 4. Dates (template) -->
+<section class="post dates" data-name="post-4-dates">
+  <div class="mini-logo"><span class="script">vael</span><span class="sans">music</span></div>
+  <span class="corner">On the decks</span>
+  <h2 class="display">Upcoming<br /><span class="script">dates</span></h2>
+  <ul data-copy>
+    <li><span class="date display">Dec 05</span><span class="venue">Venue name<small>Toronto, ON</small></span></li>
+    <li><span class="date display">Dec 19</span><span class="venue">Venue name<small>Toronto, ON</small></span></li>
+    <li><span class="date display">Dec 31</span><span class="venue">NYE · Venue name<small>Toronto, ON</small></span></li>
+  </ul>
+  <div class="foot"><span>Tickets · link in bio</span><span><b>✺</b> vael.music</span></div>
+</section>
+
+<!-- 5. New mix (drop a photo in ../vael-site/images/mix-1.jpg) -->
+<section class="post mix" data-name="post-5-new-mix">
+  <div class="mini-logo"><span class="script">vael</span><span class="sans">music</span></div>
+  <div class="frame">
+    <img src="../vael-site/images/mix-1.jpg" alt="" onerror="this.remove()" />
+    <span class="ph">vael-site/images/mix-1.jpg</span>
+  </div>
+  <div class="badge display">New<br />mix</div>
+  <h2 class="display" data-copy>Peak time <span class="script">vol. 1</span></h2>
+  <div class="foot"><span>Out now · SoundCloud</span><span><b>✺</b> vael.music</span></div>
+</section>
+
+<!-- 6. Profile picture (Instagram crops to a circle) -->
+<section class="post square profile" data-name="profile-picture">
+  <svg viewBox="0 0 1080 1080" aria-hidden="true"><path d="M 230 770 C 470 790 690 740 870 590" /></svg>
+  <span class="script">vael</span>
+</section>
+
+<!-- 7–9. Story highlight covers -->
+<section class="post tall cover" data-name="highlight-mixes"><span class="script">mixes</span></section>
+<section class="post tall cover" data-name="highlight-dates"><span class="script">dates</span></section>
+<section class="post tall cover" data-name="highlight-book"><span class="script">book</span></section>
+
+</body>
+</html>

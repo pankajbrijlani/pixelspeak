@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vael logo animation</title>
+<!--
+  Animated Vael logo. Open in a browser to preview (loops).
+  ?w=1080&h=1080  square feed post      ?w=1080&h=1920  story / reel
+  render.mjs drives window.render(t) frame by frame to export MP4s.
+-->
+<link rel="stylesheet" href="brand.css" />
+<style>
+  body { overflow: hidden; }
+  #stage { position: relative; overflow: hidden; background: var(--bg); }
+  #swoosh { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #swoosh path { fill: none; stroke: var(--orange); stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .center { position: absolute; inset: 0; display: grid; place-items: center; }
+  .lockup { display: flex; flex-direction: column; align-items: center; }
+  .logo { display: flex; align-items: baseline; white-space: nowrap; }
+  .vael { font-size: 230px; line-height: 1; margin-right: 6px; transform-origin: 30% 70%; }
+  .music { display: inline-flex; font-family: var(--body); font-weight: 600; font-size: 170px; letter-spacing: -0.02em; line-height: 1.05; }
+  .music .l { display: inline-block; overflow: hidden; padding: 0 0.01em; }
+  .music .l > span { display: inline-block; }
+  .tag { margin-top: 34px; display: flex; align-items: center; gap: 26px; }
+  .tag-text { font-family: var(--display); font-stretch: 125%; font-weight: 800; font-size: 34px; color: var(--cream-dim); white-space: nowrap; }
+  .eq { display: flex; align-items: flex-end; gap: 6px; height: 40px; }
+  .eq i { display: block; width: 8px; border-radius: 4px; background: var(--orange); height: 10px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <svg id="swoosh" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+    <path id="line" pathLength="1" d="" />
+  </svg>
+  <div class="center">
+    <div class="lockup" id="lockup">
+      <div class="logo">
+        <span class="script vael" id="vael">vael</span>
+        <span class="music" id="music"></span>
+      </div>
+      <div class="tag" id="tag">
+        <div class="eq" id="eqL"></div>
+        <span class="tag-text" id="tagText">DJ · TORONTO</span>
+        <div class="eq" id="eqR"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+const W = +params.get("w") || 1080, H = +params.get("h") || 1080;
+const DURATION = 6;          // seconds, loops seamlessly (first and last frame are empty)
+const BPM = 124;
+window.DURATION = DURATION;
+
+const stage = document.getElementById("stage");
+stage.style.width = W + "px"; stage.style.height = H + "px";
+
+// Swoosh: tall formats get a taller S-curve; drawn in a 1000x1000 box stretched to the canvas.
+const line = document.getElementById("line");
+line.setAttribute("d", H > W
+  ? "M -80 700 C 160 860 420 860 600 740 C 760 630 930 660 1080 420"
+  : "M -80 720 C 150 920 400 930 600 770 C 760 640 920 650 1080 300");
+line.style.strokeWidth = Math.round(W * 0.03) + "px";
+
+// Build "music" as individually animated letters, and the EQ bars.
+const music = document.getElementById("music");
+const letters = [..."music"].map((ch) => {
+  const wrap = document.createElement("span"); wrap.className = "l";
+  const inner = document.createElement("span"); inner.textContent = ch;
+  wrap.appendChild(inner); music.appendChild(wrap); return inner;
+});
+const bars = [];
+for (const id of ["eqL", "eqR"]) for (let i = 0; i < 5; i++) {
+  const b = document.createElement("i"); document.getElementById(id).appendChild(b); bars.push(b);
+}
+
+// Fit the lockup to ~78% of the canvas width.
+const lockup = document.getElementById("lockup");
+const vael = document.getElementById("vael");
+const tag = document.getElementById("tag");
+let fit = 1;
+function measure() { fit = (W * 0.78) / lockup.scrollWidth; }
+
+const clamp = (x) => Math.min(1, Math.max(0, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const easeBack = (x) => { const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+
+window.render = function (t) {
+  // --- swoosh: draw in, then retract from its start ---
+  const lineIn = easeInOut(seg(t, 0.0, 1.0));
+  const lineOut = easeInOut(seg(t, 4.9, 5.75));
+  line.style.strokeDasharray = "1 1";
+  line.style.strokeDashoffset = lineOut > 0 ? -lineOut : 1 - lineIn;
+
+  // --- "vael": handwritten wipe left to right, then wipe away ---
+  const vIn = easeOut(seg(t, 0.45, 1.6));
+  const vOut = easeInOut(seg(t, 4.85, 5.5));
+  const soft = 18;
+  const a = vIn * (100 + soft) - soft, b = a + soft;
+  const c = vOut * (100 + soft) - soft, d = c + soft;
+  const mask = vOut > 0
+    ? `linear-gradient(90deg, transparent ${c}%, #000 ${d}%)`
+    : `linear-gradient(90deg, #000 ${a}%, transparent ${b}%)`;
+  vael.style.webkitMaskImage = vael.style.maskImage = mask;
+  vael.style.transform = `rotate(${-10 + 4 * easeOut(seg(t, 0.45, 1.8))}deg)`;
+
+  // --- "music": letters rise in, drop out ---
+  letters.forEach((el, i) => {
+    const pin = easeBack(seg(t, 1.25 + i * 0.07, 1.8 + i * 0.07));
+    const pout = easeInOut(seg(t, 4.75 + i * 0.05, 5.2 + i * 0.05));
+    el.style.transform = `translateY(${(1 - pin) * 110 + pout * 110}%)`;
+  });
+
+  // --- tagline + EQ ---
+  const tagIn = easeOut(seg(t, 1.9, 2.5));
+  const tagOut = seg(t, 4.7, 5.0);
+  tag.style.opacity = tagIn * (1 - tagOut);
+  document.getElementById("tagText").style.letterSpacing = `${0.6 - 0.32 * tagIn}em`;
+
+  const beatLen = 60 / BPM;
+  const sinceBeat = t % beatLen;
+  const kick = Math.exp(-sinceBeat * 9);
+  bars.forEach((bar, i) => {
+    const k = i % 5;
+    const wobble = 0.5 + 0.5 * Math.sin(t * (7 + k * 1.7) + k * 1.3);
+    const h = 8 + 32 * clamp(0.25 * wobble + 0.75 * kick * (k === 2 ? 1 : 0.55 + 0.1 * k));
+    bar.style.height = h + "px";
+  });
+
+  // --- beat pulse on the lockup while it holds ---
+  const hold = seg(t, 2.0, 2.3) * (1 - seg(t, 4.5, 4.8));
+  const pulse = 1 + 0.018 * kick * hold;
+  lockup.style.transform = `scale(${fit * pulse})`;
+};
+
+document.fonts.ready.then(() => {
+  measure();
+  window.render(0);
+  window.ready = true;
+  if (!params.has("render")) {
+    const start = performance.now();
+    const loop = (now) => { window.render(((now - start) / 1000) % DURATION); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  }
+});
+</script>
+</body>
+</html>

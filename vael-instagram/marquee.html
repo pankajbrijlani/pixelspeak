@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vael bookings animation</title>
+<!--
+  "Bookings open" loop built from the website's genre marquee.
+  ?w=1080&h=1920 story / reel      ?w=1080&h=1350 feed post
+  Edit the GENRES / CALL text below to reuse it for gigs or mix drops.
+-->
+<link rel="stylesheet" href="brand.css" />
+<style>
+  body { overflow: hidden; }
+  #stage { position: relative; overflow: hidden; background: var(--bg); }
+  .band { position: absolute; left: -15%; width: 130%; overflow: hidden; }
+  .band-orange { background: var(--orange); color: var(--bg); }
+  .band-cream { background: var(--cream); color: var(--bg); }
+  .track { display: flex; width: max-content; will-change: transform; }
+  .unit { display: flex; align-items: center; gap: 34px; padding-right: 34px; white-space: nowrap;
+          font-family: var(--display); font-stretch: 125%; font-weight: 900; text-transform: uppercase;
+          letter-spacing: -0.02em; font-size: 64px; line-height: 1; padding-top: 26px; padding-bottom: 26px; }
+  .unit .dot { font-family: var(--body); font-weight: 800; font-size: 0.7em; }
+  .logo { position: absolute; top: 5.5%; left: 0; right: 0; display: flex; justify-content: center; align-items: baseline; }
+  .logo .script { font-size: 92px; margin-right: 4px; transform: rotate(-6deg); }
+  .logo .sans { font-family: var(--body); font-weight: 600; font-size: 68px; letter-spacing: -0.02em; }
+  .call { position: absolute; left: 0; right: 0; text-align: center; transform-origin: 50% 50%; }
+  .call h1 { font-size: 150px; }
+  .call h1 .script { font-size: 1.05em; transform: rotate(-7deg) translateY(-0.04em); margin-top: 0.08em; }
+  .foot { position: absolute; bottom: 5%; left: 0; right: 0; text-align: center; font-weight: 700;
+          font-size: 34px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--cream-dim); }
+  .foot b { color: var(--orange); font-weight: 800; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="band band-orange" id="band1"><div class="track" id="track1"></div></div>
+  <div class="band band-cream" id="band2"><div class="track" id="track2"></div></div>
+  <div class="band band-orange" id="band3"><div class="track" id="track3"></div></div>
+
+  <div class="logo"><span class="script">vael</span><span class="sans">music</span></div>
+
+  <div class="call" id="call">
+    <h1 class="display">Bookings<br />open<br /><span class="script">Toronto</span></h1>
+  </div>
+
+  <p class="foot" id="foot">Link in bio <b>✺</b> DM to book</p>
+</div>
+<script>
+const GENRES = ["House", "Afro House", "Disco", "Amapiano", "Open Format"];
+const BAND2 = ["Book Vael", "Club nights", "Private events", "Brand nights"];
+
+const params = new URLSearchParams(location.search);
+const W = +params.get("w") || 1080, H = +params.get("h") || 1920;
+const DURATION = 6, BPM = 124;
+window.DURATION = DURATION;
+
+const stage = document.getElementById("stage");
+stage.style.width = W + "px"; stage.style.height = H + "px";
+const tall = H / W > 1.5;
+
+function fill(trackId, words) {
+  const track = document.getElementById(trackId);
+  const unit = document.createElement("div"); unit.className = "unit";
+  unit.innerHTML = words.map((w) => `<span>${w}</span><span class="dot">✺</span>`).join("");
+  track.appendChild(unit);
+  // Repeat the unit until the track is comfortably wider than the band, so the loop never shows a gap.
+  const reps = Math.ceil((W * 2.2) / unit.offsetWidth) + 1;
+  for (let i = 0; i < reps; i++) track.appendChild(unit.cloneNode(true));
+  return { track, unitW: unit.offsetWidth };
+}
+
+const band1 = document.getElementById("band1"), band2 = document.getElementById("band2");
+band1.style.top = (tall ? 0.2 : 0.17) * H + "px";  band1.style.transform = "rotate(-7deg)";
+band2.style.top = (tall ? 0.74 : 0.77) * H + "px"; band2.style.transform = "rotate(5deg)";
+
+const band3 = document.getElementById("band3");
+if (tall) {
+  band2.style.top = 0.6 * H + "px";
+  band3.style.top = 0.76 * H + "px"; band3.style.transform = "rotate(-4deg)";
+} else band3.remove();
+
+const call = document.getElementById("call");
+call.style.top = (tall ? 0.335 : 0.3) * H + "px";
+if (!tall) call.querySelector("h1").style.fontSize = "118px";
+
+let t1, t2, t3;
+const clamp = (x) => Math.min(1, Math.max(0, x));
+
+window.render = function (t) {
+  const p = t / DURATION; // 0..1 across the loop
+  // Each track moves exactly a whole number of units per loop, so frame 0 and frame N match.
+  t1.track.style.transform = `translateX(${-p * t1.unitW}px)`;
+  t2.track.style.transform = `translateX(${-(1 - p) * t2.unitW}px)`;
+  if (t3) t3.track.style.transform = `translateX(${-p * t3.unitW}px)`;
+
+  // Beat pulse on the headline.
+  const kick = Math.exp(-(t % (60 / BPM)) * 9);
+  call.style.transform = `scale(${1 + 0.02 * kick})`;
+};
+
+document.fonts.ready.then(() => {
+  t1 = fill("track1", GENRES);
+  t2 = fill("track2", BAND2);
+  if (tall) t3 = fill("track3", [...GENRES].reverse());
+  window.render(0);
+  window.ready = true;
+  if (!params.has("render")) {
+    const start = performance.now();
+    const loop = (now) => { window.render(((now - start) / 1000) % DURATION); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  }
+});
+</script>
+</body>
+</html>
